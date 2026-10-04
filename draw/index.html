@@ -58,7 +58,7 @@ button{font-family:inherit}
 #bar .nm{flex:1;text-align:center;font-weight:900;font-size:clamp(15px,2.6vmin,20px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #stage{flex:1;position:relative;min-height:0;display:grid;place-items:center;padding:6px;touch-action:none}
 #stage canvas{position:absolute;border-radius:16px;box-shadow:var(--shadow);background:#fff}
-#draw{touch-action:none;cursor:crosshair}
+#draw{touch-action:none;cursor:crosshair;background:transparent}   /* 上層畫布要透明，不然會把底圖蓋住 */
 #tools{flex:none;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;
   padding:8px 10px calc(10px + env(safe-area-inset-bottom));background:var(--paper);box-shadow:0 -6px 20px rgba(44,58,56,.08)}
 .sw{width:clamp(32px,5.6vmin,46px);height:clamp(32px,5.6vmin,46px);border-radius:50%;border:4px solid #fff;box-shadow:0 0 0 2px var(--line);cursor:pointer}
@@ -131,7 +131,7 @@ async function renderGrid(){
   const g=$("#grid"); g.innerHTML="";
   pics.forEach(p=>{
     const c=document.createElement("button"); c.className="card";
-    const url=URL.createObjectURL(p.ink||p.img);
+    const url=URL.createObjectURL(p.thumb||p.img);
     c.innerHTML=`<img src="${url}" alt=""><span class="nm">${p.name}</span><button class="del" aria-label="刪除">✕</button>`;
     c.querySelector(".del").onclick=async e=>{ e.stopPropagation(); if(confirm("刪掉「"+p.name+"」？")){ await delPic(p.id); renderGrid(); } };
     c.onclick=()=>openPic(p.id);
@@ -207,7 +207,12 @@ $("#clear").onclick=()=>{ if(confirm("把畫的全部清掉？")){ snap(); dx.cl
 $("#undo").onclick=()=>{ const s=undoStack.pop(); if(s) dx.putImageData(s,0,0); };
 $("#back").onclick=async()=>{ await savePic(true); $("#edit").classList.add("hidden"); $("#home").classList.remove("hidden"); renderGrid(); };
 async function savePic(quiet){
-  const ink=await new Promise(r=>draw.toBlob(r,"image/png")); pic.ink=ink; await putPic(pic); if(!quiet) toast("存好了");
+  const ink=await new Promise(r=>draw.toBlob(r,"image/png")); pic.ink=ink;
+  /* 圖庫縮圖：底圖＋畫的合成一張小圖 */
+  const k=Math.min(1,420/Math.max(W,H)), c=document.createElement("canvas"); c.width=Math.round(W*k); c.height=Math.round(H*k);
+  const x=c.getContext("2d"); x.drawImage(base,0,0,c.width,c.height); x.drawImage(draw,0,0,c.width,c.height);
+  pic.thumb=await new Promise(r=>c.toBlob(r,"image/png"));
+  await putPic(pic); if(!quiet) toast("存好了");
 }
 $("#save").onclick=()=>savePic(false);
 /* 分享／存到照片：把底圖和畫的合成一張 PNG */
