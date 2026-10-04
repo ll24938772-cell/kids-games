@@ -1,0 +1,2417 @@
+<title>小車手與小訓練家</title>
+<!-- PWA：加到 iPad 主畫面後可全螢幕、可離線 -->
+<link rel="manifest" href="manifest.webmanifest"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="數學遊戲"><link rel="apple-touch-icon" href="icon-180.png"><meta name="theme-color" content="#3FA796">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Noto+Sans+TC:wght@500;700;900&display=swap">
+<style>
+/* 單一視覺世界：幼兒剪貼簿（淺色紙張）。刻意不做深色主題——
+   幼兒遊戲在深色底下會失去「紙」的質感，所有顏色一律明確指定。 */
+:root{
+  --ground:#E7F1EE;
+  --ground-dot:#CFE3DE;
+  --paper:#FFFFFF;
+  --paper-warm:#FFFBF4;
+  --ink:#2C3A38;
+  --ink-soft:#6A7B78;
+  --berry:#E8556D;
+  --sun:#FFC43D;
+  --leaf:#3FA796;
+  --grape:#7B5EA7;
+  --line:#CADDD8;
+  --shadow:0 6px 0 rgba(44,58,56,.10), 0 14px 28px rgba(44,58,56,.10);
+  --blob:20px 26px 18px 24px / 24px 18px 26px 20px;
+  --font-zh:"Noto Sans TC","Microsoft JhengHei","PingFang TC","Heiti TC",sans-serif;
+  --font-num:"Baloo 2","Noto Sans TC","Microsoft JhengHei",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:
+    radial-gradient(circle at 1px 1px, var(--ground-dot) 1.6px, transparent 1.7px) 0 0/26px 26px,
+    var(--ground);
+  color:var(--ink);
+  font-family:var(--font-zh);
+  -webkit-tap-highlight-color:transparent;
+  overscroll-behavior:none;
+  touch-action:manipulation;
+}
+#app{min-height:100svh;display:flex;flex-direction:column}
+.hidden{display:none!important}
+section{flex:1;display:flex;flex-direction:column}
+
+.tape{
+  display:inline-block;padding:.35em 1.1em;
+  background:var(--sun);color:var(--ink);
+  transform:rotate(-1.6deg);
+  box-shadow:0 3px 0 rgba(44,58,56,.12);
+  font-weight:900;letter-spacing:.06em;
+}
+
+/* ── 首頁 / 選單 ──────────────────────────── */
+.center{align-items:center;justify-content:center;gap:clamp(16px,3.2vmin,32px);padding:clamp(16px,3.6vmin,36px) 20px}
+h1{margin:0;font-size:clamp(26px,5.2vmin,46px)}
+.pick{display:flex;gap:clamp(14px,3.2vmin,36px);flex-wrap:wrap;justify-content:center}
+.who{
+  all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.3em;
+  width:clamp(170px,31vmin,300px);padding:clamp(18px,3.6vmin,34px) clamp(12px,2vmin,20px);
+  background:var(--paper);border-radius:var(--blob);box-shadow:var(--shadow);
+  transition:transform .16s ease;
+}
+.who:nth-of-type(1){transform:rotate(-2deg)}
+.who:nth-of-type(2){transform:rotate(1.8deg)}
+.who:active{transform:scale(.96) rotate(0deg)}
+.who:focus-visible{outline:4px solid var(--grape);outline-offset:4px}
+.who .face{font-size:clamp(60px,13vmin,124px);line-height:1}
+.who .name{font-weight:900;font-size:clamp(19px,3.3vmin,28px)}
+.who .sub{font-size:clamp(13px,2vmin,16px);color:var(--ink-soft);font-weight:500}
+.who[data-mode="bear"] .name{color:var(--berry)}
+.who[data-mode="rabbit"] .name{color:var(--grape)}
+
+.games{display:flex;gap:clamp(12px,2.6vmin,28px);flex-wrap:wrap;justify-content:center}
+.gm{
+  all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.25em;
+  width:clamp(132px,23vmin,210px);padding:clamp(16px,3vmin,28px) clamp(10px,1.8vmin,18px);
+  background:var(--paper);border-radius:var(--blob);box-shadow:var(--shadow);
+  transition:transform .16s ease;
+}
+.gm:nth-of-type(odd){transform:rotate(-1.4deg)}
+.gm:nth-of-type(even){transform:rotate(1.5deg)}
+.gm:active{transform:scale(.95) rotate(0)}
+.gm:focus-visible{outline:4px solid var(--grape);outline-offset:4px}
+.gm .ic{font-size:clamp(40px,8vmin,76px);line-height:1}
+.gm .nm{font-weight:900;font-size:clamp(16px,2.7vmin,23px)}
+.gm .hint{font-size:clamp(11px,1.8vmin,14px);color:var(--ink-soft);font-weight:500}
+
+#book{display:flex;flex-direction:column;align-items:center;gap:.5em;max-width:min(92vw,560px)}
+#book .cap{font-size:clamp(12px,1.9vmin,15px);letter-spacing:.14em;color:var(--ink-soft);font-weight:700}
+#bookRow{
+  display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center;
+  min-height:3.2em;padding:.7em 1em;background:var(--paper-warm);
+  border-radius:18px;box-shadow:inset 0 0 0 2px var(--line);
+}
+#bookRow .st{font-size:clamp(24px,4vmin,34px);line-height:1}
+#bookRow .empty{font-size:clamp(12px,1.9vmin,15px);color:var(--ink-soft);font-weight:500}
+
+/* ── 遊戲列 ───────────────────────────────── */
+#bar{
+  flex:none;display:flex;align-items:center;gap:clamp(10px,2vmin,20px);
+  padding:clamp(8px,1.6vmin,16px) clamp(12px,2.4vmin,24px);
+}
+.round-btn{
+  all:unset;cursor:pointer;flex:none;
+  width:clamp(46px,7.4vmin,62px);height:clamp(46px,7.4vmin,62px);
+  display:grid;place-items:center;background:var(--paper);
+  border-radius:50%;box-shadow:var(--shadow);
+}
+.round-btn:focus-visible{outline:4px solid var(--grape);outline-offset:3px}
+.round-btn svg{width:45%;height:45%;fill:none;stroke:var(--ink);stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+#ask{flex:1;text-align:center;font-weight:900;font-size:clamp(16px,3vmin,28px)}
+#clock{
+  flex:none;font-family:var(--font-num);font-weight:800;font-variant-numeric:tabular-nums;
+  font-size:clamp(22px,4.4vmin,40px);color:var(--leaf);min-width:2.6em;text-align:right;
+}
+#clock.hot{color:var(--berry);animation:pulse .9s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+
+/* 開始前的設定 */
+.opts{display:flex;flex-direction:column;gap:clamp(10px,2vmin,20px)}
+.optrow{display:flex;align-items:center;gap:clamp(10px,2vmin,20px);flex-wrap:wrap;justify-content:center}
+.olbl{font-weight:900;font-size:clamp(15px,2.6vmin,22px);color:var(--ink-soft);min-width:3.2em}
+.chips{display:flex;gap:clamp(8px,1.6vmin,14px);flex-wrap:wrap}
+.chip{
+  all:unset;cursor:pointer;padding:.5em 1.15em;border-radius:999px;
+  background:var(--paper);box-shadow:inset 0 0 0 3px var(--line);
+  font-family:var(--font-num);font-weight:800;font-size:clamp(18px,3.2vmin,28px);
+}
+.chip.on{background:var(--grape);color:#fff;box-shadow:0 4px 0 #5E4483}
+.chip:focus-visible{outline:4px solid var(--grape);outline-offset:3px}
+.row2{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+#stars{display:flex;align-items:center;gap:clamp(4px,.9vmin,8px);flex:none}
+#stars .prog{display:block;width:clamp(70px,14vmin,150px);height:clamp(9px,1.6vmin,14px);
+  border-radius:99px;background:var(--line);overflow:hidden}
+#stars .prog i{display:block;height:100%;background:var(--sun);border-radius:99px;transition:width .3s ease}
+#stars .pnum{font-family:var(--font-num);font-weight:800;font-variant-numeric:tabular-nums;
+  font-size:clamp(13px,2.3vmin,20px);color:var(--ink-soft)}
+#stars svg{width:clamp(22px,4vmin,36px);height:clamp(22px,4vmin,36px)}
+#stars .s-off{fill:var(--line)}
+#stars .s-on{fill:var(--sun)}
+
+#stage{position:relative;flex:1;display:flex;padding:0 clamp(10px,2.4vmin,40px) clamp(12px,2.6vmin,32px);
+  touch-action:none;user-select:none;-webkit-user-select:none;min-height:0;overflow:hidden}
+#play{overflow:hidden;max-height:100svh}
+
+/* ── 連連看（找一樣 / 數量配數字） ────────── */
+.pairs{position:relative;flex:1;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,3vmin,56px);min-height:0}
+.wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.wires path{fill:none;stroke-linecap:round}
+.col{display:flex;flex-direction:column;justify-content:space-evenly;gap:clamp(8px,1.6vmin,18px);position:relative;z-index:1;min-height:0}
+.card{
+  position:relative;cursor:pointer;flex:1;
+  min-height:clamp(56px,12vmin,132px);
+  display:flex;align-items:center;justify-content:center;
+  background:var(--paper);border-radius:var(--blob);box-shadow:var(--shadow);
+  transition:transform .14s ease, box-shadow .14s ease;
+}
+.card.pick{box-shadow:0 0 0 5px var(--grape), var(--shadow);transform:scale(1.04)}
+.card.done{background:var(--paper-warm);box-shadow:inset 0 0 0 3px var(--line);opacity:.62;cursor:default}
+.card.nudge{animation:nudge .42s ease}
+.card.hit{animation:pop .34s ease}
+.card .art{font-size:clamp(42px,10vmin,96px);line-height:1}
+.card .num{font-family:var(--font-num);font-weight:800;font-size:clamp(36px,9vmin,96px);line-height:1;color:var(--grape)}
+.card .pips{display:grid;gap:clamp(2px,.7vmin,7px);padding:clamp(6px,1.4vmin,14px)}
+.card .pips span{font-size:clamp(16px,4vmin,40px);line-height:1}
+@keyframes nudge{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}50%{transform:translateX(6px)}75%{transform:translateX(-3px)}}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.13)}100%{transform:scale(1)}}
+
+/* ── 點點畫 ───────────────────────────────── */
+/* svg 絕對定位：正方形 viewBox 若參與 flex 版面，會用寬度撐出等高而把畫面擠爆 */
+.dots{position:relative;flex:1;min-height:0}
+.dots svg{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+.dots .fill{fill:var(--sun);opacity:0;transition:opacity .7s ease}
+.dots .fill.on{opacity:.5}
+.dots .link{fill:none;stroke:var(--berry);stroke-width:9;stroke-linecap:round;stroke-linejoin:round}
+.dots .peg{fill:var(--paper);stroke:var(--line);stroke-width:5}
+.dots .peg.on{fill:var(--berry);stroke:var(--berry)}
+.dots .lbl{font-family:var(--font-num);font-weight:800;font-size:38px;fill:var(--ink);text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.dots .lbl.on{fill:#fff}
+.dots .halo{fill:none;stroke:var(--grape);stroke-width:6;opacity:0}
+.dots .halo.on{opacity:1;animation:ping 1.25s ease-out infinite}
+@keyframes ping{0%{r:30;opacity:.95}100%{r:62;opacity:0}}
+#reveal{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-2deg);
+  background:var(--paper);border-radius:var(--blob);box-shadow:var(--shadow);
+  padding:clamp(16px,3vmin,30px) clamp(24px,4.4vmin,48px);text-align:center;pointer-events:none;
+}
+#reveal .em{font-size:clamp(48px,11vmin,110px);line-height:1}
+#reveal .tx{font-weight:900;font-size:clamp(20px,4vmin,34px);margin-top:.2em}
+
+/* ── 點點數 ───────────────────────────────── */
+.field{position:relative;flex:1;min-height:0}
+.critter{
+  position:absolute;transform:translate(-50%,-50%);cursor:pointer;
+  font-size:clamp(58px,13vmin,128px);line-height:1;
+  filter:drop-shadow(0 5px 0 rgba(44,58,56,.14));
+  transition:opacity .2s ease;
+}
+.critter.got{opacity:.34}
+.critter.jump{animation:pop .38s ease}
+.tally{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  font-family:var(--font-num);font-weight:800;color:var(--leaf);
+  font-size:clamp(80px,22vmin,230px);line-height:1;opacity:0;pointer-events:none;
+  transition:opacity .3s ease;
+}
+.tally.on{opacity:.92}
+
+/* ── 加法盤 ───────────────────────────────── */
+.add{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(10px,2.4vmin,26px);min-height:0}
+.trays{display:flex;align-items:center;gap:clamp(8px,2vmin,26px)}
+.tray{
+  display:grid;gap:clamp(4px,1vmin,10px);align-content:center;justify-content:center;
+  padding:clamp(10px,2.2vmin,24px);min-width:clamp(96px,20vmin,210px);min-height:clamp(96px,20vmin,210px);
+  background:var(--paper);border-radius:var(--blob);box-shadow:var(--shadow);
+}
+.tray span{font-size:clamp(22px,4.6vmin,46px);line-height:1;opacity:.34;transition:opacity .15s ease,transform .15s ease}
+.tray span.lit{opacity:1;transform:scale(1.16)}
+.plus{font-family:var(--font-num);font-weight:800;font-size:clamp(30px,6.4vmin,64px);color:var(--ink-soft)}
+.ans{display:flex;gap:clamp(10px,2.2vmin,24px)}
+.ansc{
+  all:unset;cursor:pointer;display:grid;place-items:center;
+  width:clamp(74px,13vmin,124px);height:clamp(74px,13vmin,124px);
+  background:var(--paper);border-radius:var(--blob);box-shadow:var(--shadow);
+  font-family:var(--font-num);font-weight:800;font-size:clamp(34px,7vmin,68px);color:var(--grape);
+}
+.ansc:focus-visible{outline:4px solid var(--grape);outline-offset:4px}
+.ansc.nudge{animation:nudge .42s ease}
+.ansc.hit{animation:pop .34s ease;background:var(--sun)}
+
+/* ── 挑豆子 ───────────────────────────────── */
+.sortw{position:relative;flex:1;min-height:0}
+.bowl{
+  position:absolute;background:var(--paper-warm);
+  border-radius:46% 46% 44% 44% / 30% 30% 58% 58%;
+  box-shadow:var(--shadow), inset 0 0 0 3px var(--line);
+}
+.plate{
+  position:absolute;background:var(--paper);border-radius:50% / 40%;
+  box-shadow:var(--shadow);
+}
+.plate[data-t="r"]{box-shadow:var(--shadow), inset 0 0 0 6px #D4675C}
+.plate[data-t="g"]{box-shadow:var(--shadow), inset 0 0 0 6px #93C35A}
+.plate .tag{
+  position:absolute;left:0;right:0;bottom:6%;text-align:center;
+  font-weight:700;font-size:clamp(11px,1.9vmin,16px);color:var(--ink-soft);
+}
+.bean{
+  position:absolute;transform:translate(-50%,-50%) rotate(var(--r,0deg)) scale(var(--sc,1));
+  border-radius:50%;touch-action:none;cursor:pointer;
+  box-shadow:0 2px 3px rgba(44,58,56,.26);
+  transition:left .22s ease, top .22s ease, transform .18s ease, opacity .2s ease;
+}
+.bean[data-t="r"]{background:radial-gradient(circle at 34% 30%, #DE7B6E, #A32B25 72%)}
+.bean[data-t="g"]{background:radial-gradient(circle at 34% 30%, #A9D46B, #4F7C22 72%)}
+/* 2 歲版：豆子改成小車，車頂與輪子用 CSS 畫，形狀才看得出是車 */
+.sortw.cars .bowl{border-radius:26px}
+.sortw.cars .plate[data-t="g"]{box-shadow:var(--shadow), inset 0 0 0 6px #4E86C8}
+.bean.car{border-radius:42% 42% 26% 26% / 58% 58% 42% 42%}
+.bean.car[data-t="g"]{background:radial-gradient(circle at 34% 30%, #7FB3E8, #2E5D96 72%)}
+.bean.car::before{
+  content:"";position:absolute;left:26%;top:-30%;width:46%;height:48%;
+  border-radius:46% 46% 0 0;background:inherit;
+}
+.bean.car::after{
+  content:"";position:absolute;left:14%;bottom:-14%;width:24%;height:40%;
+  border-radius:50%;background:#2C3A38;box-shadow:var(--wd,20px) 0 0 #2C3A38;
+}
+.bean.grab{transition:none;z-index:60;--sc:1.18;filter:drop-shadow(0 7px 6px rgba(44,58,56,.28))}
+.bean.set{cursor:default}
+.bean.dim{opacity:.34}
+.bean.lit{opacity:1;--sc:1.3}
+.bean.wob{animation:nudge .42s ease}
+.tape-note{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-1.5deg);
+  background:var(--paper);border-radius:var(--blob);box-shadow:var(--shadow);
+  padding:clamp(14px,2.6vmin,26px) clamp(20px,4vmin,42px);text-align:center;pointer-events:none;z-index:70;
+}
+.tape-note .l1{font-family:var(--font-num);font-weight:800;font-size:clamp(24px,5vmin,48px)}
+.tape-note .l2{font-weight:900;font-size:clamp(16px,3vmin,26px);margin-top:.2em;color:var(--berry)}
+.tape-note .l3{font-weight:700;font-size:clamp(13px,2.2vmin,19px);margin-top:.35em;color:var(--leaf)}
+
+/* ── 疊高高 ───────────────────────────────── */
+.stackw{position:relative;flex:1;min-height:0}
+.ground{position:absolute;height:10px;border-radius:5px;background:var(--line)}
+.blk{
+  position:absolute;border-radius:12px;touch-action:none;cursor:pointer;
+  transform:translate(-50%,-50%) scale(var(--sc,1));
+  transition:left .26s cubic-bezier(.2,.8,.2,1), top .26s cubic-bezier(.2,.8,.2,1), transform .18s ease;
+  box-shadow:0 4px 0 rgba(44,58,56,.16);
+}
+.blk.grab{transition:none;z-index:60;--sc:1;filter:drop-shadow(0 8px 8px rgba(44,58,56,.26))}
+.blk.set{pointer-events:none}
+/* 2 歲版的積木＝貨櫃車，加兩顆輪子 */
+.blk.box::after{
+  content:"";position:absolute;left:12%;bottom:-6px;width:14%;height:12px;
+  border-radius:50%;background:#2C3A38;box-shadow:var(--wd,60px) 0 0 #2C3A38;
+}
+/* 玩具版：看得到底面有多寬（實線）、上面能放東西的範圍有多大（虛線） */
+.blk.toy{background:transparent;box-shadow:none;display:grid;place-items:center;overflow:visible}
+.blk.toy .em{line-height:1;pointer-events:none}
+.blk.toy .foot,.blk.toy .cap{
+  position:absolute;left:50%;transform:translateX(-50%);pointer-events:none;
+}
+.blk.toy .foot{bottom:-3px;height:5px;border-radius:3px;background:rgba(44,58,56,.30)}
+.blk.toy .cap{top:-2px;height:0;border-top:3px dotted rgba(44,58,56,.26)}
+.compin{position:absolute;transform:translateX(-50%);pointer-events:none;z-index:80;text-align:center}
+.compin .bar{height:44px;border-left:3px dashed var(--berry);opacity:.75;margin:0 auto;width:0}
+.compin .dot{width:16px;height:16px;border-radius:50%;background:var(--berry);margin:0 auto;
+  box-shadow:0 0 0 5px rgba(232,85,109,.22)}
+.compin .lb{font-weight:900;font-size:13px;color:var(--berry);margin-top:3px}
+.blk.wob{animation:nudge .42s ease}
+.blk.shake{animation:shake .5s ease}
+@keyframes shake{
+  0%,100%{transform:translate(-50%,-50%) scale(var(--sc,1)) rotate(0)}
+  20%{transform:translate(-53%,-50%) scale(var(--sc,1)) rotate(-2deg)}
+  55%{transform:translate(-47%,-50%) scale(var(--sc,1)) rotate(2deg)}
+  80%{transform:translate(-51%,-50%) scale(var(--sc,1)) rotate(-1deg)}
+}
+.blk.fall{
+  transition:transform .66s cubic-bezier(.36,0,.9,.45), opacity .4s .34s;
+  transform:translate(calc(-50% + var(--fx,0px)), calc(-50% + var(--fy,0px))) rotate(var(--fr,0deg));
+  opacity:0;
+}
+
+/* ── 影子配對：右欄用 brightness(0) 把 emoji 壓成純黑剪影 ── */
+.card .art.shadow{filter:brightness(0);opacity:.78}
+
+/* ── 記憶翻牌 ── */
+.memw{flex:1;display:grid;gap:clamp(6px,1.4vmin,14px);place-content:center;min-height:0;
+  grid-auto-rows:1fr;width:100%}
+.mcard{position:relative;cursor:pointer;perspective:700px;min-height:0}
+.mface{
+  position:absolute;inset:0;display:grid;place-items:center;border-radius:var(--blob);
+  backface-visibility:hidden;transition:transform .38s ease;box-shadow:var(--shadow);
+  font-size:clamp(22px,6vmin,58px);line-height:1;
+}
+.mback{background:var(--grape);transform:rotateY(0deg)}
+.mback::after{content:"";width:36%;height:36%;border-radius:50%;background:rgba(255,255,255,.28)}
+.mfront{background:var(--paper);transform:rotateY(180deg)}
+.mcard.open .mback{transform:rotateY(-180deg)}
+.mcard.open .mfront{transform:rotateY(0deg)}
+.mcard.gone .mfront{background:var(--paper-warm);box-shadow:inset 0 0 0 3px var(--line);opacity:.55}
+
+/* ── 天平 ── */
+.scalew{position:relative;flex:1;display:flex;flex-direction:column;min-height:0}
+.scaleTop{position:relative;flex:1;min-height:0}
+.stand{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:0;height:0;
+  border-left:clamp(18px,3vmin,30px) solid transparent;border-right:clamp(18px,3vmin,30px) solid transparent;
+  border-bottom:clamp(44px,8vmin,84px) solid var(--line)}
+.beam{
+  position:absolute;left:50%;bottom:clamp(42px,7.6vmin,80px);
+  width:min(86%,560px);height:12px;border-radius:6px;background:var(--ink-soft);
+  transform:translateX(-50%) rotate(var(--deg,0deg));
+  transition:transform .55s cubic-bezier(.3,1.3,.5,1);
+}
+.pan{position:absolute;top:6px;width:44%;transform-origin:top center;
+  transform:rotate(calc(-1 * var(--deg,0deg)));transition:transform .55s cubic-bezier(.3,1.3,.5,1);
+  display:flex;flex-direction:column;align-items:center}
+.pan.l{left:0} .pan.r{right:0}
+.rope{width:3px;height:clamp(14px,2.6vmin,28px);background:var(--line)}
+.dish{width:100%;min-height:clamp(44px,8vmin,80px);background:var(--paper);box-shadow:var(--shadow);
+  border-radius:6px 6px 46% 46% / 6px 6px 76% 76%;
+  display:flex;justify-content:center;align-items:flex-end;gap:4px;padding:6px clamp(4px,1vmin,10px) 8px;flex-wrap:wrap}
+.mon{position:relative;cursor:pointer;line-height:1;font-size:clamp(22px,5vmin,48px);
+  transition:transform .15s ease}
+.mon:active{transform:scale(.92)}
+.dish .mon{cursor:pointer}
+.wt{
+  position:absolute;right:-6px;bottom:-4px;min-width:1.45em;height:1.45em;border-radius:999px;
+  background:var(--grape);color:#fff;font-family:var(--font-num);font-weight:800;
+  font-size:clamp(10px,1.8vmin,15px);display:grid;place-items:center;box-shadow:0 2px 0 rgba(0,0,0,.15)}
+.pool{flex:none;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;
+  gap:clamp(8px,2vmin,20px);padding:clamp(6px,1.6vmin,16px);background:var(--paper-warm);
+  border-radius:18px;box-shadow:inset 0 0 0 2px var(--line);margin-top:clamp(6px,1.4vmin,14px)}
+.pool .mon.used{opacity:.25;pointer-events:none}
+
+/* ── 湊十 ── */
+.tenw{flex:1;display:grid;gap:clamp(6px,1.6vmin,16px);place-content:center;min-height:0;
+  grid-auto-rows:1fr;width:100%}
+.tcard{
+  position:relative;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:var(--paper);border-radius:var(--blob);box-shadow:var(--shadow);
+  transition:transform .15s ease, box-shadow .15s ease, opacity .3s ease;
+}
+.tcard .n{font-family:var(--font-num);font-weight:800;color:var(--grape);
+  font-size:clamp(26px,6.4vmin,62px);line-height:1}
+.tcard .dots{display:flex;flex-wrap:wrap;justify-content:center;gap:2px;max-width:80%;margin-top:.25em}
+.tcard .dots i{width:clamp(5px,1.1vmin,10px);height:clamp(5px,1.1vmin,10px);border-radius:50%;background:var(--leaf)}
+.tcard.pick{box-shadow:0 0 0 5px var(--grape), var(--shadow);transform:scale(1.05)}
+.tcard.gone{opacity:0;pointer-events:none;transform:scale(.7)}
+.tcard.nudge{animation:nudge .42s ease}
+
+/* ── 尺分兩堆 ── */
+.rulerw{position:relative;flex:1;min-height:0}
+.rulerw .bean{pointer-events:none}                 /* 只有尺能動，樹果是被推的 */
+.ruler{
+  position:absolute;top:3%;height:94%;width:clamp(24px,3.6vmin,38px);
+  transform:translateX(-50%);border-radius:9px;cursor:grab;touch-action:none;z-index:40;
+  background:linear-gradient(90deg,#F0D19B 0%,#E3BA77 45%,#D2A257 100%);
+  box-shadow:0 5px 0 rgba(44,58,56,.20), 0 10px 20px rgba(44,58,56,.18);
+}
+.ruler::after{                                     /* 刻度，看起來才像一把尺 */
+  content:"";position:absolute;inset:0;border-radius:9px;
+  background:repeating-linear-gradient(180deg,
+    transparent 0 24px, rgba(90,60,20,.38) 24px 26px);
+}
+.ruler.grab{cursor:grabbing;filter:brightness(1.06)}
+.ruler.wob{animation:nudge .42s ease}
+.rulerbar{flex:none;display:flex;justify-content:center;gap:12px;padding-top:clamp(6px,1.4vmin,14px)}
+.toast{
+  position:absolute;left:50%;top:12%;transform:translateX(-50%);z-index:90;pointer-events:none;
+  background:var(--ink);color:#fff;font-weight:900;border-radius:999px;
+  padding:.5em 1.2em;font-size:clamp(14px,2.4vmin,20px);opacity:.94;
+}
+
+/* ── 畫線救狗狗 ── */
+.savew{position:relative;flex:1;min-height:0}
+.savew canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;
+  border-radius:20px;box-shadow:inset 0 0 0 3px var(--line)}
+.savew.shake{animation:nudge .42s ease}
+.inkbar{position:absolute;left:50%;transform:translateX(-50%);top:10px;
+  width:46%;height:12px;border-radius:7px;background:rgba(44,58,56,.14);overflow:hidden}
+.inkbar i{display:block;height:100%;width:100%;background:var(--grape);border-radius:7px;
+  transition:width .12s linear}
+.inkbar.out i{background:var(--berry)}
+.savebar{flex:none;display:flex;justify-content:center;align-items:center;gap:12px;
+  padding-top:clamp(6px,1.4vmin,14px)}
+.savetip{font-weight:700;color:var(--ink-soft);font-size:clamp(12px,2vmin,17px)}
+
+/* ── 兩人對戰 ── */
+.duelw{position:relative;flex:1;min-height:0}
+.mid{position:absolute;left:50%;top:0;bottom:0;width:4px;margin-left:-2px;
+  background:repeating-linear-gradient(var(--line) 0 12px, transparent 12px 24px)}
+.winner{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-2deg);z-index:90;
+  background:var(--paper);border-radius:var(--blob);box-shadow:var(--shadow);
+  padding:clamp(16px,3vmin,30px) clamp(24px,4.4vmin,48px);text-align:center;pointer-events:none}
+.winner .w1{font-size:clamp(40px,9vmin,86px);line-height:1}
+.winner .w2{font-weight:900;font-size:clamp(20px,4vmin,34px);margin-top:.2em}
+
+.btn{
+  all:unset;cursor:pointer;display:inline-block;
+  padding:.55em 1.5em;background:var(--leaf);color:#fff;
+  font-weight:900;font-size:clamp(15px,2.6vmin,22px);
+  border-radius:999px;box-shadow:0 5px 0 #2F8476;
+}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 #2F8476}
+.btn:focus-visible{outline:4px solid var(--grape);outline-offset:4px}
+.btn.ghost{background:var(--paper-warm);color:var(--ink);box-shadow:inset 0 0 0 3px var(--line)}
+.btn.ghost:active{transform:translateY(2px);box-shadow:inset 0 0 0 3px var(--line)}
+.btn[disabled]{opacity:.45;cursor:default}
+
+/* ── 完成 ─────────────────────────────────── */
+#done{position:fixed;inset:0;display:grid;place-items:center;z-index:5}
+#confetti{position:absolute;inset:0;width:100%;height:100%}
+#donecard{
+  position:relative;text-align:center;
+  padding:clamp(22px,4.4vmin,44px) clamp(26px,5vmin,56px);
+  background:var(--paper);border-radius:var(--blob);box-shadow:var(--shadow);
+  transform:rotate(-1.2deg);
+}
+#donecard .big{font-size:clamp(52px,13vmin,124px);line-height:1}
+#donecard h2{margin:.4em 0 .1em;font-size:clamp(22px,4.4vmin,38px)}
+#donecard p{margin:0 0 1em;color:var(--ink-soft);font-weight:500;font-size:clamp(13px,2.1vmin,17px)}
+#donebtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div id="app">
+  <section id="home" class="center">
+    <h1><span class="tape">來玩吧</span></h1>
+    <div class="pick">
+      <button class="who" data-mode="bear">
+        <span class="face">🚗</span><span class="name">小車手</span><span class="sub">2 歲</span>
+      </button>
+      <button class="who" data-mode="rabbit">
+        <span class="face">🐲</span><span class="name">小訓練家</span><span class="sub">5 歲</span>
+      </button>
+    </div>
+    <div id="book"><span class="cap">收集簿</span><div id="bookRow"></div></div>
+  </section>
+
+  <section id="menu" class="center hidden">
+    <h1 id="menuTitle"></h1>
+    <div class="games" id="menuGames"></div>
+    <button class="btn ghost" id="menuBack">回首頁</button>
+  </section>
+
+  <section id="setup" class="center hidden">
+    <h1><span class="tape" id="setupTitle">分樹果</span></h1>
+    <div class="opts">
+      <div class="optrow"><span class="olbl">幾顆</span><div class="chips" id="optN"></div></div>
+      <div class="optrow"><span class="olbl">限時</span><div class="chips" id="optT"></div></div>
+    </div>
+    <div class="row2">
+      <button class="btn" id="setupGo">開始</button>
+      <button class="btn ghost" id="setupBack">回選單</button>
+    </div>
+  </section>
+
+  <section id="play" class="hidden">
+    <div id="bar">
+      <button class="round-btn" id="back" aria-label="回到選單">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5 12 5l8 7.5"/><path d="M6.5 11v8h11v-8"/></svg>
+      </button>
+      <div id="ask"></div>
+      <div id="clock" class="hidden"></div>
+      <div id="stars"></div>
+    </div>
+    <div id="stage"></div>
+  </section>
+
+  <section id="done" class="hidden">
+    <canvas id="confetti"></canvas>
+    <div id="donecard">
+      <div class="big" id="doneSticker">⭐</div>
+      <h2 id="doneTitle">好棒！</h2>
+      <p id="doneSub">新貼紙收進貼紙簿了</p>
+      <div id="donebtns">
+        <button class="btn" id="again">再玩一次</button>
+        <button class="btn ghost" id="toMenu">換一個玩</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ═══════════ 資料 ═══════════ */
+const ART   = ["🚗","🚕","🚙","🚌","🚚","🚓","🚒","🏎️","🛻","🚜","🚐","🛵"];   /* 2 歲：車 */
+const CRITTER = ["🚗","🚙","🚕","🚌","🚚","🚓","🛻","🏎️"];
+const PIPS  = ["🥚","🔥","💧","⚡","🍇","🌿"];                                   /* 5 歲：怪獸 */
+const COOKIE  = ["🍇","🍒","🍎","🍊","🍐"];
+const STICKERS = ["🏎️","🚓","🚑","🚒","🚜","🛻","🚁","⛵","🐲","🦖","🗿","⚡","🔥","💧","🌈","🏆"];
+const PRAISE = ["對了","好棒","很好"];
+
+/* 點點畫圖形：座標是 0~1 的比例，照順序連起來再閉合 */
+const SHAPES = {
+  bear:[
+    {n:"三角錐",e:"🚧",p:[[.50,.10],[.62,.70],[.78,.70],[.78,.86],[.22,.86],[.22,.70],[.38,.70]]},
+    {n:"停車牌",e:"🛑",p:[[.87,.65],[.65,.87],[.35,.87],[.13,.65],[.13,.35],[.35,.13],[.65,.13],[.87,.35]]},
+    {n:"汽車",  e:"🚗",p:[[.10,.72],[.10,.58],[.26,.56],[.36,.34],[.64,.32],[.76,.56],[.92,.58],[.92,.72]]}
+  ],
+  rabbit:[
+    {n:"水怪獸",e:"🐟",p:[[.18,.50],[.30,.33],[.45,.26],[.60,.28],[.72,.36],[.80,.46],[.90,.28],[.96,.50],[.90,.72],[.80,.54],[.60,.70],[.36,.66]]},
+    {n:"蟲怪獸",e:"🦋",p:[[.50,.20],[.66,.10],[.82,.16],[.86,.34],[.72,.44],[.88,.58],[.84,.76],[.66,.80],[.54,.64],[.50,.84],[.46,.64],[.34,.80],[.16,.76],[.12,.58],[.28,.44],[.14,.34],[.18,.16],[.34,.10]]},
+    {n:"貓怪獸",e:"🐱",p:[[.28,.32],[.30,.12],[.44,.26],[.58,.12],[.60,.32],[.68,.42],[.66,.54],[.76,.64],[.80,.80],[.82,.90],[.94,.88],[.96,.70],[.88,.72],[.86,.84],[.60,.92],[.40,.92],[.28,.86],[.24,.70],[.26,.54],[.22,.44]]},
+    {n:"龍怪獸",e:"🐲",p:[[.14,.22],[.22,.16],[.28,.22],[.34,.34],[.40,.44],[.48,.50],[.56,.47],[.64,.45],[.72,.47],[.79,.52],[.85,.58],[.92,.64],[.97,.72],[.90,.77],[.80,.72],[.74,.76],[.77,.90],[.67,.90],[.64,.75],[.54,.77],[.44,.78],[.47,.90],[.37,.90],[.34,.75],[.28,.65],[.24,.55],[.20,.45],[.16,.36],[.10,.30],[.08,.24]]}
+  ]
+};
+
+const GAMES = {
+  match: {mode:"bear",  nm:"找一樣的車",ic:"🚕",hint:"50 題抽 5", rounds:5, ask:"把一樣的車連起來"},
+  tally: {mode:"bear",  nm:"數車子",    ic:"🚙",hint:"50 題抽 5", rounds:5, ask:"每一台都點一下"},
+  dotsS: {mode:"bear",  nm:"連成車",    ic:"🏎️",hint:"50 台抽 5", rounds:5, ask:"點亮亮的點點"},
+  sortS: {mode:"bear",  nm:"停車場",    ic:"🅿️",hint:"紅藍分開",  rounds:3, ask:"紅車停紅格，藍車停藍格"},
+  stackS:{mode:"bear",  nm:"疊貨櫃",    ic:"🚚",hint:"疊 5 層",   rounds:3, ask:"把貨櫃疊上去"},
+  link:  {mode:"rabbit",nm:"數量配數字",ic:"🥚",hint:"50 題抽 5", rounds:5, ask:"數一數，連到數字"},
+  plus:  {mode:"rabbit",nm:"樹果加法",  ic:"🍇",hint:"50 題抽 5", rounds:5, ask:"合起來是幾顆？"},
+  dotsL: {mode:"rabbit",nm:"畫出怪獸",  ic:"🐲",hint:"50 隻抽 5", rounds:5, ask:"照數字順序連起來"},
+  sortL: {mode:"rabbit",nm:"分樹果",    ic:"🔥",hint:"火系草系",  rounds:3, ask:"火果放火袋，草果放草袋"},
+  stackL:{mode:"rabbit",nm:"疊怪獸",    ic:"🐉",hint:"找重心",    rounds:3, ask:"疊起來，別讓牠倒"},
+  shadow:{mode:"bear",  nm:"影子配對",  ic:"🌗",hint:"50 題抽 5", rounds:5, ask:"把車子連到自己的影子"},
+  memS:  {mode:"bear",  nm:"記憶翻牌",  ic:"🃏",hint:"3 對",      rounds:3, ask:"翻兩張，找一樣的車"},
+  memL:  {mode:"rabbit",nm:"記憶翻牌",  ic:"🃏",hint:"8 對",      rounds:2, ask:"翻兩張，找一樣的怪獸"},
+  scale: {mode:"rabbit",nm:"天平",      ic:"⚖️",hint:"一樣重",    rounds:4, ask:"放到兩邊一樣重"},
+  ten:   {mode:"rabbit",nm:"湊十",      ic:"🔟",hint:"加起來 10", rounds:3, ask:"找出兩顆加起來剛好 10"},
+  duel:  {mode:"rabbit",nm:"兩人對戰",  ic:"⚔️",hint:"比誰快",    rounds:1, ask:"看誰先分完"},
+  ruler: {mode:"rabbit",nm:"尺分兩堆",  ic:"📏",hint:"分解數字",  rounds:3, ask:"用尺把樹果推成兩堆"},
+  save:  {mode:"rabbit",nm:"畫線救狗狗",ic:"🐶",hint:"擋住蜜蜂",  rounds:4, ask:"畫一條線，別讓蜜蜂叮到狗狗"}
+};
+
+/* ═══════════ 狀態 ═══════════ */
+let mode="bear", game="match", step=0;
+let maxNum=5, sumMax=6, miss=0;
+let cleanup=null;
+
+/* 分樹果的設定：幾顆、限時幾秒（0＝不限時）。記在平板上，下次沿用 */
+let sortCfg={n:10,sec:0};
+let duelCfg={L:10,R:10};                       /* 兩邊顆數可以不一樣，給年紀小的少一點 */
+let saveCfg={pct:70};                          /* 救狗狗的蜜蜂強度，100＝目前最難 */
+try{ const s=JSON.parse(localStorage.getItem("llk.sortcfg")||"null"); if(s&&s.n) sortCfg=s; }catch(e){}
+try{ const d=JSON.parse(localStorage.getItem("llk.duelcfg")||"null"); if(d&&d.L) duelCfg=d; }catch(e){}
+try{ const s=JSON.parse(localStorage.getItem("llk.savecfg")||"null"); if(s&&s.pct) saveCfg=s; }catch(e){}
+function storeCfg(){
+  try{ localStorage.setItem("llk.sortcfg",JSON.stringify(sortCfg));
+       localStorage.setItem("llk.duelcfg",JSON.stringify(duelCfg));
+       localStorage.setItem("llk.savecfg",JSON.stringify(saveCfg)); }catch(e){}
+}
+
+/* ═══════════ DOM ═══════════ */
+const $  = s=>document.querySelector(s);
+const home=$("#home"), menu=$("#menu"), play=$("#play"), done=$("#done");
+const stage=$("#stage"), askEl=$("#ask"), starsEl=$("#stars"), bookRow=$("#bookRow");
+
+/* ═══════════ 貼紙簿 ═══════════ */
+function loadBook(){ try{ return JSON.parse(localStorage.getItem("llk.stickers")||"[]"); }catch(e){ return []; } }
+function saveBook(a){ try{ localStorage.setItem("llk.stickers",JSON.stringify(a)); }catch(e){} }
+function renderBook(){
+  const b=loadBook();
+  bookRow.innerHTML = b.length ? b.map(s=>`<span class="st">${s}</span>`).join("")
+                               : `<span class="empty">玩完一輪就會收集到第一個</span>`;
+}
+
+/* ═══════════ 聲音 ═══════════ */
+let ac=null;
+function audio(){
+  if(ac===null){ try{ ac=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ ac=false; } }
+  if(ac && ac.state==="suspended") ac.resume();
+  return ac||null;
+}
+function tone(f,at,dur,vol,type){
+  const c=audio(); if(!c) return;
+  const o=c.createOscillator(), g=c.createGain(), t=c.currentTime+at;
+  o.type=type||"sine"; o.frequency.value=f;
+  g.gain.setValueAtTime(0,t);
+  g.gain.linearRampToValueAtTime(vol,t+.015);
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g); g.connect(c.destination); o.start(t); o.stop(t+dur+.05);
+}
+const sfx={
+  tap(){ tone(660,0,.09,.10,"triangle"); },
+  step(i){ tone(392*Math.pow(2,(i%8)/12),0,.12,.09,"triangle"); },
+  yes(){ [523.25,659.25,783.99].forEach((f,i)=>tone(f,i*.085,.26,.13)); },
+  soft(){ tone(300,0,.13,.06); tone(240,.1,.16,.05); },   /* 不是「錯了」，只是回彈 */
+  fall(){ [300,240,190,150].forEach((f,i)=>tone(f,i*.09,.2,.09,"square")); },
+  cheer(){ [523.25,659.25,783.99,1046.5,1318.5].forEach((f,i)=>tone(f,i*.1,.4,.12,"triangle")); }
+};
+
+let zhVoice=null;
+function findVoice(){
+  if(!("speechSynthesis" in window)) return;
+  const v=speechSynthesis.getVoices()||[];
+  zhVoice = v.find(x=>/^zh[-_]TW/i.test(x.lang)) || v.find(x=>/^zh[-_]HK/i.test(x.lang))
+         || v.find(x=>/^zh/i.test(x.lang)) || null;
+}
+if("speechSynthesis" in window){ findVoice(); speechSynthesis.addEventListener("voiceschanged",findVoice); }
+/* 沒有中文語音就完全不唸——絕不用英文腔唸中文 */
+function say(t){
+  if(!zhVoice) return;
+  try{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(t);
+    u.voice=zhVoice; u.lang=zhVoice.lang; u.rate=.85; u.pitch=1.15;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+const D=["零","一","二","三","四","五","六","七","八","九"];
+function zh(n){
+  if(n<10) return D[n];
+  if(n===10) return "十";
+  if(n<20) return "十"+D[n%10];
+  return D[(n/10)|0]+"十"+(n%10?D[n%10]:"");
+}
+function sayNum(n){ say(zh(n)); }
+
+/* ═══════════ 小工具 ═══════════ */
+const shuffle=a=>{ for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]];} return a; };
+const pickN=(a,n)=>shuffle(a.slice()).slice(0,n);
+const one=a=>a[Math.random()*a.length|0];
+function starSvg(on){
+  return `<svg viewBox="0 0 24 24" aria-hidden="true"><path class="${on?"s-on":"s-off"}"
+    d="M12 2.6l2.9 6.1 6.6.9-4.8 4.7 1.2 6.6L12 17.7 6.1 20.9l1.2-6.6L2.5 9.6l6.6-.9z"/></svg>`;
+}
+function renderStars(){
+  const n=GAMES[game].rounds;
+  starsEl.innerHTML = n>8                                   /* 題數多就改用進度條，星星塞不下 */
+    ? `<span class="prog"><i style="width:${Math.round(step/n*100)}%"></i></span><span class="pnum">${step}/${n}</span>`
+    : Array.from({length:n},(_,i)=>starSvg(i<step)).join("");
+  starsEl.setAttribute("aria-label",`完成 ${step} / ${n}`);
+}
+/* ═══════════ 挑戰計時 ═══════════ */
+const clockEl=$("#clock");
+let clockT=null, clockEnd=0, onTimeUp=null, clockCarry=0;   /* carry＝跨輪接續剩下的秒數 */
+function stopClock(){ if(clockT){ clearInterval(clockT); clockT=null; } }
+function clockLeft(){ return Math.max(0,Math.ceil((clockEnd-Date.now())/1000)); }
+function startClock(sec){
+  stopClock(); onTimeUp=null;
+  if(!sec){ clockEl.classList.add("hidden"); return; }
+  clockEl.classList.remove("hidden");
+  clockEnd=Date.now()+sec*1000;
+  const tick=()=>{
+    const L=clockLeft();
+    clockEl.textContent=L+"″";
+    clockEl.classList.toggle("hot",L<=10);
+    if(L<=0){ stopClock(); const f=onTimeUp; onTimeUp=null; if(f) f(); }
+  };
+  tick(); clockT=setInterval(tick,200);
+}
+
+function nextRound(){
+  step++;
+  if(step>=GAMES[game].rounds){ renderStars(); finish(); return; }
+  renderStars();
+  build();
+}
+
+/* ═══════════ 遊戲一：連連看（找一樣 / 數量配數字）═══ */
+function buildPairs(){
+  const isShadow = game==="shadow";
+  const isMatch = game==="match"||isShadow;
+  const pairs = isMatch?3:4;
+  let L,R;
+  if(isMatch){
+    const items=(qpool[step]&&qpool[step].items) || pickN(ART,pairs);
+    L=shuffle(items.slice()).map(v=>({k:v,art:v}));
+    R=shuffle(items.slice()).map(v=>({k:v,art:v,shadow:isShadow}));
+  }else{
+    const q=qpool[step] || {nums:pickN([2,3,4,5,6],pairs), pip:one(PIPS)};
+    L=shuffle(q.nums.slice()).map(n=>({k:n,count:n,pip:q.pip}));
+    R=shuffle(q.nums.slice()).map(n=>({k:n,num:n}));
+  }
+  stage.innerHTML=`<div class="pairs"><svg class="wires"></svg><div class="col cl"></div><div class="col cr"></div></div>`;
+  const wrap=stage.querySelector(".pairs"), wires=stage.querySelector(".wires");
+  const cl=stage.querySelector(".cl"), cr=stage.querySelector(".cr");
+  L.forEach((d,i)=>cl.appendChild(mkCard(d,"L",i)));
+  R.forEach((d,i)=>cr.appendChild(mkCard(d,"R",i)));
+
+  let locked=[], sel=null, drag=null, activeId=null, downAt=null, moved=false;
+  miss=0;
+  const COLORS=["var(--berry)","var(--leaf)","var(--grape)","var(--sun)"];
+  const box=()=>wrap.getBoundingClientRect();
+  const ctr=el=>{const r=el.getBoundingClientRect(),b=box();return{x:r.left-b.left+r.width/2,y:r.top-b.top+r.height/2};};
+  const curve=(a,b)=>{const mx=(a.x+b.x)/2;return `M${a.x} ${a.y} C ${mx} ${a.y}, ${mx} ${b.y}, ${b.x} ${b.y}`;};
+  const sw=()=>Math.max(6,Math.min(14,box().width*.012));
+
+  function draw(){
+    const w=sw(); let s="";
+    locked.forEach((p,i)=>{ s+=`<path d="${curve(ctr(p.l),ctr(p.r))}" stroke="${COLORS[i%4]}" stroke-width="${w}"/>`; });
+    if(drag) s+=`<path d="${curve(ctr(drag.el),drag.pt)}" stroke="var(--ink-soft)" stroke-width="${w}" stroke-dasharray="${w*1.6} ${w*1.6}" opacity=".55"/>`;
+    wires.innerHTML=s;
+  }
+  function cardAt(x,y){
+    for(const e of document.elementsFromPoint(x,y)){ const c=e.closest&&e.closest(".card"); if(c) return c; }
+    return null;
+  }
+  /* 放手時抓最接近的右卡——幼兒手指不會精準 */
+  function nearestR(x,y){
+    let best=null,bd=Infinity;
+    cr.querySelectorAll(".card:not(.done)").forEach(el=>{
+      const r=el.getBoundingClientRect();
+      const d=Math.hypot(r.left+r.width/2-x, r.top+r.height/2-y);
+      if(d<bd){bd=d;best=el;}
+    });
+    return (best && bd < Math.max(80, box().width*.10)) ? best : null;
+  }
+  function clearSel(){ if(sel) sel.classList.remove("pick"); sel=null; drag=null; draw(); }
+  function resolve(l,r){
+    if(L[+l.dataset.i].k===R[+r.dataset.i].k){
+      l.classList.remove("pick"); sel=null;
+      l.classList.add("done","hit"); r.classList.add("done","hit");
+      setTimeout(()=>{l.classList.remove("hit");r.classList.remove("hit");},360);
+      locked.push({l,r}); sfx.yes();
+      if(isMatch) say(one(PRAISE)); else sayNum(R[+r.dataset.i].num);
+      draw();
+      if(locked.length===pairs) setTimeout(()=>{
+        if(!isMatch){ if(miss===0) maxNum=Math.min(12,maxNum+1); else if(miss>=2) maxNum=Math.max(3,maxNum-1); }
+        nextRound();
+      },640);
+    }else{
+      miss++;
+      r.classList.add("nudge"); setTimeout(()=>r.classList.remove("nudge"),440);
+      sfx.soft(); clearSel();
+    }
+  }
+  function onDown(e){
+    if(activeId!==null) return;           /* 只認一根手指，小孩會整隻手壓上來 */
+    audio();
+    const c=cardAt(e.clientX,e.clientY);
+    if(!c||c.classList.contains("done")){ clearSel(); return; }
+    activeId=e.pointerId; downAt={x:e.clientX,y:e.clientY}; moved=false;
+    if(c.dataset.side==="R"){ if(sel) resolve(sel,c); else sfx.tap(); activeId=null; return; }
+    sfx.tap();
+    cl.querySelectorAll(".card.pick").forEach(o=>o.classList.remove("pick"));
+    sel=c; c.classList.add("pick");
+    const b=box();
+    drag={el:c,pt:{x:e.clientX-b.left,y:e.clientY-b.top}};
+    draw();
+  }
+  function onMove(e){
+    if(e.pointerId!==activeId||!drag) return;
+    if(downAt && Math.hypot(e.clientX-downAt.x,e.clientY-downAt.y)>12) moved=true;
+    const b=box(); drag.pt={x:e.clientX-b.left,y:e.clientY-b.top}; draw();
+  }
+  function onUp(e){
+    if(e.pointerId!==activeId) return;
+    if(drag){
+      const t = moved ? (cardAt(e.clientX,e.clientY)||nearestR(e.clientX,e.clientY)) : null;
+      const l=drag.el; drag=null;
+      if(t && t.dataset.side==="R" && !t.classList.contains("done")) resolve(l,t);
+      else if(moved) clearSel();          /* 拖到空白：安靜收線，維持「沒有錯」 */
+      draw();
+    }
+    activeId=null; downAt=null; moved=false;
+  }
+  wrap.addEventListener("pointerdown",onDown);
+  wrap.addEventListener("pointermove",onMove);
+  wrap.addEventListener("pointerup",onUp);
+  wrap.addEventListener("pointercancel",onUp);
+  requestAnimationFrame(draw);
+  window.addEventListener("resize",draw);          /* 轉向時只重畫線，不重出題 */
+  return ()=>window.removeEventListener("resize",draw);
+}
+function mkCard(d,side,i){
+  const el=document.createElement("div");
+  el.className="card"; el.dataset.side=side; el.dataset.i=i;
+  el.style.transform=`rotate(${(i%2?1:-1)*(.8+Math.random()*1.1)}deg)`;
+  if(d.art!==undefined)      el.innerHTML=`<span class="art${d.shadow?" shadow":""}">${d.art}</span>`;
+  else if(d.num!==undefined) el.innerHTML=`<span class="num">${d.num}</span>`;
+  else el.innerHTML=`<span class="pips" style="grid-template-columns:repeat(${d.count<=6?Math.min(3,d.count):(d.count<=12?4:5)},1fr)">`+
+       Array.from({length:d.count},()=>`<span>${d.pip}</span>`).join("")+`</span>`;
+  return el;
+}
+
+/* ═══════════ 遊戲二：點點畫 ═══════════ */
+/* 50 隻怪獸不可能一隻一隻手繪，改用參數生成：極座標半徑隨角度起伏，
+   花瓣數、振幅、尖或圓、扁或長各自隨機 → 每次都是沒看過的輪廓。
+   前幾題先用手繪的魚／蝴蝶／貓／龍當暖身，之後點數從 10 長到 30。 */
+/* 怪獸不是隨機的圓形，是照身體構造描出來的：
+   鼻尖→額頭→角→後腦→頸→肩→背（翅膀／砲管／棘刺／背鰭）→臀→尾巴→後腳→肚子→前腳→胸。
+   每種原型有自己的特徵，連完才認得出是什麼。尺寸與棘刺數量隨機微調，不會兩隻一樣。 */
+const ARCH=[
+  {n:"火翼龍",e:"🐉",plan:"beast",wing:1,horn:1,back:"smooth", tail:"spike"},
+  {n:"雷鳥",  e:"⚡",plan:"bird",  crest:1, tail:"fan"},
+  {n:"海龍",  e:"🌊",plan:"serp",  fin:1,   horn:1},
+  {n:"砲甲龜",e:"🐢",plan:"beast",wing:0,horn:0,back:"cannons",tail:"ball"},
+  {n:"冰角獸",e:"❄️",plan:"beast",wing:0,horn:2,back:"plates", tail:"spike"},
+  {n:"刺背龍",e:"🦕",plan:"beast",wing:0,horn:0,back:"spikes", tail:"long"},
+  {n:"聖鹿",  e:"🦌",plan:"beast",wing:0,horn:3,back:"smooth", tail:"ball"},
+  {n:"翼蝠獸",e:"🦇",plan:"bird",  crest:0, tail:"fin"},
+  {n:"鰭水獸",e:"🐟",plan:"serp",  fin:2,   horn:0},
+  {n:"甲蟲獸",e:"🪲",plan:"beast",wing:0,horn:1,back:"plates", tail:"ball"}
+];
+function genCreature(i){
+  const A=ARCH[i%ARCH.length], J=a=>(Math.random()-.5)*a;
+  if(A.plan==="bird")  return genBird(A,i,J);
+  if(A.plan==="serp")  return genSerp(A,i,J);
+  const want=Math.max(12,Math.min(30, 12+Math.round((i-4)/45*18)));
+  const full=want>=20, spikeN=Math.max(1,Math.min(5,Math.round((want-13)/3)));
+  const gy=.88, by0=.40+J(.06), by1=.70+J(.04);
+  const hr=.085+J(.02), hx=.20+J(.03), hy=.30+J(.05);
+  const p=[], push=(x,y)=>p.push([Math.max(.02,Math.min(.98,x)),Math.max(.02,Math.min(.98,y))]);
+
+  push(hx-hr*1.3, hy+hr*.3);                       /* 鼻尖 */
+  push(hx-hr*.8,  hy-hr*.9);                       /* 額頭 */
+  if(A.horn===1){ push(hx-hr*.1, hy-hr*2.4); push(hx+hr*.35, hy-hr*1.0); }
+  else if(A.horn===2){ push(hx-hr*.4,hy-hr*2.2); push(hx,hy-hr*1.1); push(hx+hr*.4,hy-hr*2.2); push(hx+hr*.7,hy-hr*1.0); }
+  else if(A.horn===3){                             /* 鹿角：分岔 */
+    push(hx-hr*.5,hy-hr*2.0); push(hx-hr*.9,hy-hr*2.9); push(hx-hr*.2,hy-hr*2.5);
+    push(hx+hr*.3,hy-hr*3.1); push(hx+hr*.5,hy-hr*2.1); push(hx+hr*.8,hy-hr*1.0);
+  }
+  else push(hx+hr*.3, hy-hr*1.05);
+  push(hx+hr*1.05, hy-hr*.2);                      /* 後腦 */
+  push(hx+hr*1.2,  hy+hr*1.0);                     /* 頸 */
+  push(.36, by0+.02);                              /* 肩 */
+
+  let bx=.40;
+  if(A.wing){                                      /* 翅膀：兩個翼尖＋中間的凹 */
+    push(.43, by0-.02);
+    push(.47, .12+J(.04)); push(.60, .20+J(.04));
+    push(.55, .31);        push(.67, .28+J(.03));
+    push(.63, by0-.02);
+    bx=.66;
+  }
+  if(A.back==="spikes"){                           /* 背棘 */
+    const w=(.76-bx)/spikeN;
+    for(let k=0;k<spikeN;k++){
+      push(bx+w*k+w*.5, by0-.10-J(.03));
+      push(bx+w*(k+1),  by0+.01);
+    }
+  }else if(A.back==="cannons"){                    /* 背上兩根砲管 */
+    [0,1].forEach(k=>{
+      const x=bx+.06+k*.17;
+      push(x, by0-.01); push(x-.02, by0-.20-J(.03));
+      push(x+.09, by0-.22-J(.03)); push(x+.10, by0-.02);
+    });
+  }else if(A.back==="plates"){                     /* 背甲 */
+    const n=Math.max(2,Math.min(3,spikeN));
+    const w=(.76-bx)/n;
+    for(let k=0;k<n;k++){ push(bx+w*k+w*.5, by0-.06); push(bx+w*(k+1), by0+.02); }
+  }else if(A.back==="fin"){                        /* 背鰭 */
+    push(.50, by0-.20); push(.62, by0-.16); push(.70, by0+.01);
+  }
+  push(.79, by0+.06);                              /* 臀 */
+
+  if(A.tail==="spike"){ push(.94, by0-.03); push(.86, by0+.13); }
+  else if(A.tail==="long"){ push(.90, by0-.07); push(.98, by0+.03); push(.88, by0+.12); }
+  else if(A.tail==="fin"){ push(.88, by0-.11); push(.97, by0-.02); push(.94, by0+.11); push(.85, by0+.13); }
+  else { push(.89, by0-.04); push(.95, by0+.03); push(.88, by0+.11); }
+
+  if(full){ push(.72, by1); push(.72, gy); push(.62, gy); push(.61, by1); }   /* 後腳 */
+  else { push(.72, gy); push(.62, gy); }
+  push(.47, by1+.02);                              /* 肚子 */
+  if(full){ push(.37, by1); push(.37, gy); push(.27, gy); push(.26, by1-.01); }/* 前腳 */
+  else { push(.37, gy); push(.27, gy); }
+  push(.22, by1-.11);                              /* 胸 */
+  push(hx-hr*1.05, hy+hr*1.5);
+  return {n:A.n, e:A.e, p};
+}
+/* 鳥型：喙、冠羽、兩片大展翅、扇尾、細腳 */
+function genBird(A,i,J){
+  const p=[], push=(x,y)=>p.push([Math.max(.02,Math.min(.98,x)),Math.max(.02,Math.min(.98,y))]);
+  const hy=.36+J(.05), gy=.88;
+  push(.05, hy+.03);                               /* 喙尖 */
+  push(.14, hy-.04);
+  if(A.crest){ push(.16,hy-.16-J(.04)); push(.22,hy-.07); push(.25,hy-.17-J(.04)); }
+  push(.24, hy+.01);                               /* 後腦 */
+  push(.27, hy+.09);                               /* 肩 */
+  push(.31, .10+J(.04)); push(.50, .17+J(.04));    /* 近翼 */
+  push(.43, .40);
+  push(.54, .36);
+  push(.60, .12+J(.04)); push(.80, .20+J(.04));    /* 遠翼 */
+  push(.72, .44);
+  if(A.tail==="fan"){ push(.86,.38); push(.97,.44+J(.04)); push(.95,.58); push(.84,.56); }
+  else { push(.88,.40); push(.96,.52); push(.86,.58); }
+  push(.66, .62);                                  /* 身體下緣 */
+  push(.54, .62); push(.54, gy); push(.46, gy); push(.45, .62);   /* 腳 */
+  push(.30, .56);                                  /* 胸 */
+  push(.12, hy+.12);
+  return {n:A.n, e:A.e, p};
+}
+/* 蛇型：長長的波浪身體，頭上有角或背鰭 */
+function genSerp(A,i,J){
+  const p=[], push=(x,y)=>p.push([Math.max(.02,Math.min(.98,x)),Math.max(.02,Math.min(.98,y))]);
+  const n=5+(i%3), th=.085+J(.02), amp=.15+J(.05), y0=.48;
+  const wave=x=>y0+Math.sin((x-.2)*7.2)*amp;
+  push(.05, wave(.05)+.02);                        /* 鼻尖 */
+  push(.11, wave(.11)-th*1.1);                     /* 頭頂 */
+  if(A.horn){ push(.15, wave(.15)-th*2.6); push(.20, wave(.20)-th*1.2); }
+  for(let k=0;k<=n;k++){                           /* 背 */
+    const x=.24+(.92-.24)*k/n;
+    if(A.fin===2 && k%2===1) push(x, wave(x)-th-.10);   /* 背鰭 */
+    push(x, wave(x)-th);
+  }
+  push(.97, wave(.97));                            /* 尾尖 */
+  for(let k=n;k>=0;k--){                           /* 腹 */
+    const x=.24+(.92-.24)*k/n;
+    push(x, wave(x)+th);
+  }
+  push(.10, wave(.10)+th*1.2);
+  return {n:A.n, e:A.e, p};
+}
+/* 2 歲的連成車：五種車身側面輪廓（含賽車的低扁車身與尾翼），
+   點數多的版本會多出輪拱，看起來更像車。 */
+const VEH=[
+  {n:"轎車",e:"🚗",top:[[.08,.70],[.10,.56],[.26,.54],[.36,.34],[.64,.32],[.78,.54],[.92,.56],[.92,.70]]},
+  {n:"賽車",e:"🏎️",top:[[.05,.70],[.05,.60],[.30,.58],[.38,.46],[.54,.44],[.62,.56],[.78,.54],
+                        [.78,.33],[.96,.31],[.96,.45],[.87,.47],[.93,.70]]},
+  {n:"卡車",e:"🚚",top:[[.06,.70],[.06,.46],[.14,.44],[.20,.30],[.36,.30],[.36,.46],[.44,.46],[.44,.26],[.94,.26],[.94,.70]]},
+  {n:"巴士",e:"🚌",top:[[.06,.70],[.06,.34],[.14,.26],[.88,.26],[.94,.34],[.94,.70]]},
+  {n:"小貨車",e:"🛻",top:[[.06,.70],[.06,.50],[.18,.48],[.26,.32],[.46,.32],[.52,.48],[.94,.48],[.94,.70]]}
+];
+function genVehicle(i){
+  const T=VEH[i%VEH.length], J=a=>(Math.random()-.5)*a;
+  const want=7+Math.round((i%50)/49*9);
+  const p=T.top.map(([x,y])=>[x+J(.02), y+J(.03)]);
+  if(want>=10){                                    /* 輪拱：車子底下兩個輪子 */
+    [[.74,.70],[.70,.80],[.60,.80],[.56,.70],[.38,.70],[.34,.80],[.24,.80],[.20,.70]]
+      .forEach(([x,y])=>p.push([x+J(.015), y]));
+  }
+  return {n:T.n, e:T.e, p};
+}
+
+/* 三個遊戲都是「圖庫 50 題，每次開始隨機抽 5 題」，抽完由易到難排好 */
+let qpool=[];
+function buildPool(id){
+  if(id==="link"){
+    const all=[];
+    for(let i=0;i<50;i++){
+      const hi=Math.min(12, 4+Math.round(i/49*8)), lo=Math.max(1,hi-3), pool=[];
+      for(let v=lo;v<=hi;v++) pool.push(v);
+      all.push({nums:pickN(pool,4), pip:one(PIPS)});
+    }
+    return shuffle(all).slice(0,5).sort((a,b)=>Math.max(...a.nums)-Math.max(...b.nums));
+  }
+  if(id==="plus"){
+    const all=[];
+    for(let i=0;i<50;i++){
+      const tot=3+Math.round(i/49*16), a=1+(Math.random()*(tot-1)|0);
+      all.push({a, b:tot-a});
+    }
+    return shuffle(all).slice(0,5).sort((x,y)=>(x.a+x.b)-(y.a+y.b));
+  }
+  if(id==="match"||id==="shadow"){                 /* 50 種三台車的組合，抽 5 題 */
+    const all=[]; for(let i=0;i<50;i++) all.push({items:pickN(ART,3)});
+    return shuffle(all).slice(0,5);
+  }
+  if(id==="tally"){                                /* 50 種「幾台什麼車」，抽 5 題 */
+    const all=[];
+    for(let i=0;i<50;i++) all.push({n:1+(i%5), art:one(CRITTER)});
+    return shuffle(all).slice(0,5).sort((a,b)=>a.n-b.n);
+  }
+  if(id==="dotsS"){                                /* 50 台車，抽 5 台 */
+    const all=SHAPES.bear.slice();
+    for(let i=all.length;i<50;i++) all.push(genVehicle(i));
+    const pick=[], seen=new Set();
+    shuffle(all).forEach(s=>{ if(pick.length<5 && !seen.has(s.n)){ seen.add(s.n); pick.push(s); } });
+    return pick.sort((a,b)=>a.p.length-b.p.length);
+  }
+  if(id==="dotsL"){
+    const all=SHAPES.rabbit.slice();
+    for(let i=all.length;i<50;i++) all.push(genCreature(i));
+    /* 一局 5 隻不能重複種類，不然會連出兩隻一樣的 */
+    const pick=[], seen=new Set();
+    shuffle(all).forEach(s=>{ if(pick.length<5 && !seen.has(s.n)){ seen.add(s.n); pick.push(s); } });
+    return pick.sort((a,b)=>a.p.length-b.p.length);
+  }
+  return [];
+}
+let shapeQueue=[];
+function buildDots(){
+  const small = game==="dotsS";
+  let sh;
+  if(small){
+    sh=qpool[step] || genVehicle(step);            /* 這一局抽中的 5 台車 */
+  }else{
+    sh=qpool[step] || genCreature(step);           /* 這一局抽中的 5 隻 */
+  }
+  const P=sh.p.map(([x,y])=>[40+x*920, 40+y*920]);   /* viewBox 0 0 1000 1000，留邊 */
+  let at=0, wrong=0, hint=small;                      /* 小熊版一開始就發光；小兔版錯兩次才發光 */
+
+  stage.innerHTML=`<div class="dots"><svg viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid meet">
+      <path class="fill"></path><path class="link" d=""></path><g class="pegs"></g></svg></div>`;
+  const svg=stage.querySelector("svg"), fill=svg.querySelector(".fill"),
+        link=svg.querySelector(".link"), pegs=svg.querySelector(".pegs");
+  fill.setAttribute("d","M"+P.map(p=>p.join(" ")).join(" L ")+" Z");
+
+  pegs.innerHTML=P.map((p,i)=>
+    `<g data-i="${i}"><circle class="halo" cx="${p[0]}" cy="${p[1]}" r="30"></circle>`+
+    `<circle class="peg" cx="${p[0]}" cy="${p[1]}" r="30"></circle>`+
+    `<text class="lbl" x="${p[0]}" y="${p[1]}">${i+1}</text></g>`).join("");
+  const G=[...pegs.children];
+
+  function paint(){
+    G.forEach((g,i)=>{
+      g.querySelector(".peg").classList.toggle("on", i<at);
+      g.querySelector(".lbl").classList.toggle("on", i<at);
+      g.querySelector(".halo").classList.toggle("on", hint && i===at);
+    });
+    link.setAttribute("d", at>1 ? "M"+P.slice(0,at).map(p=>p.join(" ")).join(" L ") : "");
+  }
+  paint();
+
+  const pt=svg.createSVGPoint();
+  function toVB(e){
+    pt.x=e.clientX; pt.y=e.clientY;
+    const m=svg.getScreenCTM(); if(!m) return null;
+    return pt.matrixTransform(m.inverse());
+  }
+  function onDown(e){
+    audio();
+    const v=toVB(e); if(!v) return;
+    let best=-1,bd=Infinity;
+    P.forEach((p,i)=>{const d=Math.hypot(p[0]-v.x,p[1]-v.y); if(d<bd){bd=d;best=i;}});
+    if(bd>78) return;                       /* 離任何點都太遠：當作沒按到 */
+    if(best!==at){                          /* 按錯只是沒反應，不責備 */
+      if(!small && ++wrong>=2){ hint=true; paint(); }
+      sfx.soft(); return;
+    }
+    at++; sfx.step(at); sayNum(at); paint();
+    if(at===P.length){
+      link.setAttribute("d","M"+P.map(p=>p.join(" ")).join(" L ")+" Z");
+      fill.classList.add("on");
+      setTimeout(()=>{
+        sfx.cheer(); say("是"+sh.n);
+        const r=document.createElement("div");
+        r.id="reveal"; r.innerHTML=`<div class="em">${sh.e}</div><div class="tx">是${sh.n}！</div>`;
+        stage.appendChild(r);
+      },420);
+      setTimeout(nextRound,2300);
+    }
+  }
+  svg.addEventListener("pointerdown",onDown);
+  return null;
+}
+
+/* ═══════════ 遊戲三：點點數 ═══════════ */
+function buildTally(){
+  const q=qpool[step] || {n:1+(Math.random()*5|0), art:one(CRITTER)};
+  const n=q.n, art=q.art;
+  const slots=shuffle([[22,26],[50,20],[78,28],[30,58],[62,56],[20,84],[50,86],[80,80]]).slice(0,n);
+  stage.innerHTML=`<div class="field">`+
+    slots.map((s,i)=>`<div class="critter" data-i="${i}" style="left:${s[0]}%;top:${s[1]}%">${art}</div>`).join("")+
+    `<div class="tally"></div></div>`;
+  const field=stage.querySelector(".field"), tallyEl=stage.querySelector(".tally");
+  let got=0;
+  field.addEventListener("pointerdown",e=>{
+    audio();
+    const c=e.target.closest(".critter");
+    if(!c||c.classList.contains("got")) return;
+    c.classList.add("got","jump");
+    setTimeout(()=>c.classList.remove("jump"),400);
+    got++; sfx.step(got); sayNum(got);
+    if(got===n){
+      setTimeout(()=>{
+        tallyEl.textContent=n; tallyEl.classList.add("on");
+        sfx.cheer(); say("總共"+zh(n)+"個");
+      },450);
+      setTimeout(nextRound,2200);
+    }
+  });
+  return null;
+}
+
+/* ═══════════ 遊戲四：加法盤 ═══════════ */
+function buildPlus(){
+  const q=qpool[step] || {a:2,b:2};
+  const a=q.a, b=q.b, total=a+b, art=one(COOKIE);
+  const opts=new Set([total]);
+  while(opts.size<3){
+    const d=[-2,-1,1,2][Math.random()*4|0], v=total+d;
+    if(v>=1&&v<=24) opts.add(v);
+  }
+  const tray=(k,pip)=>`<div class="tray" style="grid-template-columns:repeat(${k<=6?Math.min(3,k):(k<=12?4:5)},1fr)">`+
+    Array.from({length:k},(_,i)=>`<span data-n="${i}">${pip}</span>`).join("")+`</div>`;
+  stage.innerHTML=`<div class="add">
+      <div class="trays">${tray(a,art)}<div class="plus">+</div>${tray(b,art)}</div>
+      <button class="btn" id="countBtn">數一數</button>
+      <div class="ans">`+shuffle([...opts]).map(v=>`<button class="ansc" data-v="${v}">${v}</button>`).join("")+`</div>
+    </div>`;
+  const all=[...stage.querySelectorAll(".tray span")];
+  const btn=$("#countBtn");
+  let answered=false, timers=[];
+
+  btn.addEventListener("click",()=>{
+    audio(); btn.disabled=true;
+    all.forEach(s=>s.classList.remove("lit"));
+    all.forEach((s,i)=>timers.push(setTimeout(()=>{
+      s.classList.add("lit"); sfx.step(i+1); sayNum(i+1);
+      if(i===all.length-1) timers.push(setTimeout(()=>{ btn.disabled=false; },700));
+    },i*640)));
+  });
+
+  stage.querySelector(".ans").addEventListener("pointerdown",e=>{
+    audio();
+    const c=e.target.closest(".ansc"); if(!c||answered) return;
+    if(+c.dataset.v===total){
+      answered=true; c.classList.add("hit"); sfx.yes(); sayNum(total);
+      all.forEach(s=>s.classList.add("lit"));
+      timers.push(setTimeout(()=>{ miss=0; nextRound(); },1100));
+    }else{
+      miss=1; sumMax=Math.max(4,sumMax-1);
+      c.classList.add("nudge"); setTimeout(()=>c.classList.remove("nudge"),440);
+      sfx.soft();
+    }
+  });
+  return ()=>timers.forEach(clearTimeout);
+}
+
+/* ═══════════ 共用：單指拖曳 ═══════════ */
+/* 回傳 onDrop(元素, 放手時的 x, y, 放回原位的函式) */
+function dragify(box, sel, onDrop, multi){
+  const act=new Map();                          /* pointerId → 正在拖的東西 */
+  function down(e){
+    if(!multi && act.size) return;              /* 單人模式只認一根手指（小孩會整隻手壓上來）*/
+    if(act.has(e.pointerId)) return;
+    const t=e.target.closest(sel);
+    if(!t || t.classList.contains("set") || t.dataset.busy==="1") return;
+    audio(); sfx.tap();
+    const r=t.getBoundingClientRect();
+    t.dataset.busy="1";
+    act.set(e.pointerId,{el:t,
+      ox:parseFloat(t.style.left), oy:parseFloat(t.style.top),
+      dx:e.clientX-(r.left+r.width/2), dy:e.clientY-(r.top+r.height/2)});
+    t.classList.add("grab"); t.classList.remove("tip");
+    try{ box.setPointerCapture(e.pointerId); }catch(err){}
+  }
+  function move(e){
+    const a=act.get(e.pointerId); if(!a) return;
+    const b=box.getBoundingClientRect();
+    a.el.style.left=(e.clientX-b.left-a.dx)+"px";
+    a.el.style.top =(e.clientY-b.top -a.dy)+"px";
+  }
+  function up(e){
+    const a=act.get(e.pointerId); if(!a) return;
+    act.delete(e.pointerId);
+    const b=box.getBoundingClientRect(), cur=a.el, bx=a.ox, by=a.oy;
+    cur.classList.remove("grab"); delete cur.dataset.busy;
+    onDrop(cur, e.clientX-b.left, e.clientY-b.top,
+           ()=>{ cur.style.left=bx+"px"; cur.style.top=by+"px"; });
+  }
+  box.addEventListener("pointerdown",down);
+  box.addEventListener("pointermove",move);
+  box.addEventListener("pointerup",up);
+  box.addEventListener("pointercancel",up);
+}
+const inRect=(x,y,r)=>x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.h+r.y;
+
+/* ═══════════ 遊戲五：挑豆子 ═══════════ */
+function buildSort(){
+  const big = game==="sortL";
+  const n = big?sortCfg.n:8;
+  /* 數量多的時候不要太懸殊，兩邊都要有得數 */
+  const nr = n>14 ? Math.round(n*(0.35+Math.random()*0.3))
+                  : Math.max(2, Math.min(n-2, 2+Math.random()*(n-3)|0));
+  const kinds = shuffle(Array.from({length:n},(_,i)=>i<nr?"r":"g"));
+
+  const cars=!big;                                                  /* 2 歲＝停車場，5 歲＝分樹果 */
+  const LB = cars?["紅色車位","藍色車位"]:["火系 🔥","草系 🌿"];
+  stage.innerHTML=`<div class="sortw${cars?" cars":""}"><div class="bowl"></div>
+      <div class="plate" data-t="r"><span class="tag">${LB[0]}</span></div>
+      <div class="plate" data-t="g"><span class="tag">${LB[1]}</span></div></div>`;
+  const box=stage.querySelector(".sortw");
+  const W=box.clientWidth, H=box.clientHeight;
+  const dens=Math.sqrt(12/n);                                       /* 顆數越多、每顆越小 */
+  let S=Math.max(15,Math.min(46, Math.min(W,H)*0.062*dens));
+  if(cars) S*=1.8;                                                  /* 2 歲版的車子放大一倍 */
+  const BW=cars?S*1.55:S;                                           /* 一台車比一顆果寬 */
+
+  const bowl={x:W*.16,y:H*.02,w:W*.68,h:H*.44};
+  const pw=Math.min(W*.40, H*.46), ph=Math.min(H*.40, pw*.8);
+  const plates={
+    r:{x:W*.06,          y:H-ph-H*.03, w:pw, h:ph},
+    g:{x:W*.94-pw,       y:H-ph-H*.03, w:pw, h:ph}
+  };
+  const bowlEl=box.querySelector(".bowl");
+  Object.assign(bowlEl.style,{left:bowl.x+"px",top:bowl.y+"px",width:bowl.w+"px",height:bowl.h+"px"});
+  box.querySelectorAll(".plate").forEach(p=>{
+    const r=plates[p.dataset.t];
+    Object.assign(p.style,{left:r.x+"px",top:r.y+"px",width:r.w+"px",height:r.h+"px"});
+  });
+
+  /* 豆子散在碗裡，盡量不重疊 */
+  const put=[];
+  kinds.forEach((t,i)=>{
+    let x,y,ok=false;
+    for(let k=0;k<24&&!ok;k++){
+      x=bowl.x+BW*.6+Math.random()*(bowl.w-BW*1.2);
+      y=bowl.y+S+Math.random()*(bowl.h-S*2.2);
+      ok=put.every(p=>Math.hypot(p[0]-x,p[1]-y)>BW*.92);
+    }
+    put.push([x,y]);
+    const b=document.createElement("div");
+    b.className=cars?"bean car":"bean"; b.dataset.t=t; b.dataset.i=i; b.dataset.in="";
+    b.style.cssText=cars
+      ? `left:${x}px;top:${y}px;width:${BW}px;height:${S*.92}px;--wd:${BW*.42}px;--r:${(Math.random()*16-8)|0}deg`
+      : `left:${x}px;top:${y}px;width:${S}px;height:${S*.82}px;--r:${(Math.random()*60-30)|0}deg`;
+    box.appendChild(b);
+  });
+
+  /* 盤子是橢圓，把落點收進盤內 0.84 的範圍，其餘位置隨他放、可以互相疊 */
+  function intoPlate(t,x,y){
+    const p=plates[t], cx=p.x+p.w/2, cy=p.y+p.h/2;
+    const rx=p.w/2-BW*.55, ry=p.h/2-S*.5;
+    const dx=(x-cx)/rx, dy=(y-cy)/ry, d=Math.hypot(dx,dy);
+    if(d<=.86) return [x,y];
+    const k=.86/d;
+    return [cx+dx*rx*k, cy+dy*ry*k];
+  }
+  let z=10;
+  function sortedAll(){
+    return [...box.querySelectorAll(".bean")].every(b=>b.dataset.in===b.dataset.t);
+  }
+  dragify(box,".bean",(el,x,y,back)=>{
+    const t=el.dataset.t;
+    const hit = inRect(x,y,plates.r)?"r" : inRect(x,y,plates.g)?"g" : null;
+    el.style.zIndex=++z;                                     /* 後放的疊在上面 */
+    if(hit && hit!==t){                                      /* 放錯盤：彈回原處 */
+      back(); el.classList.add("wob"); setTimeout(()=>el.classList.remove("wob"),440);
+      sfx.soft(); return;
+    }
+    if(hit===t){
+      const [px,py]=intoPlate(t,x,y);
+      el.style.left=px+"px"; el.style.top=py+"px";
+      el.dataset.in=t; sfx.yes();
+      if(sortedAll()) setTimeout(()=>{ if(sortedAll()) finishSort(); },600);
+    }else{                                                   /* 放在盤外：就停在那裡 */
+      el.style.left=Math.max(BW*.6,Math.min(W-BW*.6,x))+"px";
+      el.style.top =Math.max(S,Math.min(H-S,y))+"px";
+      el.dataset.in="";
+    }
+  });
+
+  const timers=[];
+  const lockAll=()=>box.querySelectorAll(".bean").forEach(b=>b.classList.add("set"));
+
+  /* 限時到了：停下來，算分好了幾顆 */
+  if(big && sortCfg.sec) onTimeUp=()=>{
+    lockAll(); timers.forEach(clearTimeout); sfx.fall();
+    const done=box.querySelectorAll('.bean[data-in="r"],.bean[data-in="g"]').length;
+    const note=document.createElement("div");
+    note.className="tape-note";
+    note.innerHTML=`<div class="l1">分好 ${done} / ${n} 顆</div><div class="l2">時間到！</div>`;
+    box.appendChild(note); say("時間到");
+    setTimeout(()=>finish("時間到！","這次分好 "+done+" 顆"),2100);
+  };
+
+  function finishSort(){
+    lockAll();                                                        /* 開始結算就不能再動 */
+    /* 這一輪結束先暫停計時，剩下的秒數留給下一輪 */
+    const bonus = (big&&sortCfg.sec) ? clockLeft() : 0;
+    clockCarry=bonus; stopClock(); onTimeUp=null;
+    if(!big){ sfx.cheer(); say("分好了"); timers.push(setTimeout(nextRound,1200)); return; }
+    /* 小兔版：分完逐顆點亮報數，再比多少。顆數多就數快一點，也不逐顆唸 */
+    const gap = n<=14?560 : (n<=30?240:140), voice = n<=14;
+    const R=[...box.querySelectorAll('.bean[data-t="r"]')], G=[...box.querySelectorAll('.bean[data-t="g"]')];
+    [...R,...G].forEach(b=>b.classList.add("dim"));
+    const seq=[...R.map(b=>[b,"r"]),...G.map(b=>[b,"g"])];
+    let cr=0,cg=0;
+    seq.forEach(([b,t],i)=>timers.push(setTimeout(()=>{
+      b.classList.add("lit");
+      const k = t==="r" ? ++cr : ++cg;
+      sfx.step(k); if(voice) sayNum(k);
+    }, i*gap)));
+    const end=seq.length*gap;
+    timers.push(setTimeout(()=>{
+      const more = nr>n-nr ? "火果比較多" : (nr<n-nr ? "草果比較多" : "一樣多");
+      const note=document.createElement("div");
+      note.className="tape-note";
+      note.innerHTML=`<div class="l1">🔥 ${nr} ・ 🌿 ${n-nr}</div><div class="l2">${more}</div>`+
+        (bonus?`<div class="l3">還剩 ${bonus} 秒！</div>`:"");
+      box.appendChild(note);
+      sfx.cheer(); say(more);
+    }, end+400));
+    timers.push(setTimeout(nextRound, end+2600));
+  }
+  return ()=>{ timers.forEach(clearTimeout); onTimeUp=null; };
+}
+
+/* ═══════════ 遊戲六：疊高高 / 疊玩具 ═══════════
+   玩具的重心不在正中間，底面也不一樣寬——方塊版一看就知道要放中間，
+   玩具版只能自己試：氣球站不住（底是那條線）、球上面幾乎放不了東西、
+   大象很重（放上層會把整座塔的重心拉過去）。
+   s=大小、bw/bx=底面寬與偏移、tw/tx=可以放東西的上面、m=重量、c=重心偏移 */
+const TOYS=[
+  {e:"🗿",n:"岩石怪",s:1.10,bw:.85,bx:0,  tw:.70,tx:0,   m:8,  c:0},
+  {e:"🐢",n:"龜怪",  s:1.05,bw:.85,bx:0,  tw:.55,tx:0,   m:4,  c:0},
+  {e:"🐲",n:"龍",    s:1.35,bw:.70,bx:0,  tw:.45,tx:.04, m:7,  c:.03},
+  {e:"🦖",n:"暴龍",  s:1.25,bw:.55,bx:-.04,tw:.40,tx:-.05,m:6, c:-.04},
+  {e:"🐙",n:"章魚怪",s:1.05,bw:.80,bx:0,  tw:.35,tx:0,   m:3,  c:0},
+  {e:"🍄",n:"菇怪",  s:0.95,bw:.32,bx:0,  tw:.72,tx:0,   m:2,  c:0},
+  {e:"🦊",n:"火狐",  s:1.00,bw:.55,bx:0,  tw:.42,tx:0,   m:3,  c:0},
+  {e:"🥚",n:"蛋",    s:0.85,bw:.22,bx:0,  tw:.22,tx:0,   m:2,  c:0},
+  {e:"⚡",n:"電球",  s:0.85,bw:.16,bx:0,  tw:.30,tx:0,   m:1,  c:0},
+  {e:"🐝",n:"蜂怪",  s:0.80,bw:.28,bx:0,  tw:.38,tx:0,   m:1,  c:0}
+];
+
+function buildStack(){
+  const toy = game==="stackL";
+  const TOPPLE = toy;                    /* 玩具版重心偏了會真的垮；小熊積木版只晃不倒 */
+  const cnt = toy?6:5;
+  const COL=["#E8556D","#FFC43D","#3FA796","#7B5EA7","#5C9BD1","#E8845A","#7CB342","#C2568F"];
+
+  stage.innerHTML=`<div class="stackw"><div class="ground"></div></div>`;
+  const box=stage.querySelector(".stackw");
+  const W=box.clientWidth, H=box.clientHeight;
+  const pileTop=H*0.62;                                   /* 這條線以上就算放到塔上 */
+  const baseY=pileTop-8;
+  Object.assign(box.querySelector(".ground").style,
+    {left:(W*.04)+"px",top:baseY+"px",width:(W*.92)+"px"});
+
+  /* ── 每一件的力學資料（單位都換算成 px）── */
+  let P;
+  if(toy){
+    const defs=pickN(TOYS,cnt);
+    if(!defs.some(d=>d.bw>=.8)) defs[0]=TOYS[0];          /* 保證至少有一個站得穩的底座 */
+    const sumH=defs.reduce((a,d)=>a+d.s*.84,0);
+    const U=Math.max(46, Math.min(W/6.2,(pileTop-26)/sumH,116));
+    P=defs.map((d,i)=>({k:i,d,w:d.s*U,h:d.s*U*.84,
+      bw:d.bw*d.s*U, bx:d.bx*d.s*U, tw:d.tw*d.s*U, tx:d.tx*d.s*U, m:d.m, c:d.c*d.s*U}));
+  }else{
+    const h=Math.max(20,Math.min(46,(pileTop-16)/cnt));
+    const wide=Math.min(W*.52,420);
+    P=Array.from({length:cnt},(_,i)=>{
+      const w=Math.round(wide*(1-0.58*(i/(cnt-1))));
+      return {k:i,w,h,bw:w,bx:0,tw:w,tx:0,m:w,c:0,col:COL[i%COL.length]};
+    });
+  }
+
+  /* ── 料堆：縮小排在下方，換行置中 ── */
+  const SC=toy?0.72:0.58, gap=12;
+  const rows=[]; let row=[], used=0;
+  shuffle(P.slice()).forEach(p=>{
+    const ww=p.w*SC;
+    if(used+ww+gap>W*.94 && row.length){ rows.push({row,used}); row=[]; used=0; }
+    row.push(p); used+=ww+gap;
+  });
+  if(row.length) rows.push({row,used});
+  let oy=pileTop+10;
+  rows.forEach(R=>{
+    const rh=Math.max(...R.row.map(p=>p.h))*SC+10;
+    let x=(W-(R.used-gap))/2;
+    R.row.forEach(p=>{
+      const ww=p.w*SC, ox=x+ww/2, cy=oy+rh/2;
+      const el=document.createElement("div");
+      el.className=toy?"blk toy":"blk box"; el.dataset.k=p.k;
+      el.dataset.ox=ox; el.dataset.oy=cy; el.dataset.sc=SC;    /* 垮下來要回到這裡 */
+      el.style.cssText=`left:${ox}px;top:${cy}px;width:${p.w}px;height:${p.h}px;--sc:${SC};`+
+        (toy?"":`background:${p.col};--wd:${p.w*.62}px`);
+      if(toy) el.innerHTML=
+        `<span class="em" style="font-size:${p.w*.98}px">${p.d.e}</span>`+
+        `<span class="cap" style="width:${p.tw}px;margin-left:${p.tx}px"></span>`+
+        `<span class="foot" style="width:${p.bw}px;margin-left:${p.bx}px"></span>`;
+      box.appendChild(el);
+      p.el=el; x+=ww+gap;
+    });
+    oy+=rh;
+  });
+
+  /* ── 「會不會倒」的物理：上面所有東西的合重心，要落在下面那件的支撐面內 ── */
+  const tower=[];                        /* 由下而上 {p,x} */
+  let busy=false, stackTop=baseY;
+  const OVER=toy?0.42:0.22;              /* 底面要壓到下面那件上面多少比例才算搭上（小熊版放寬）*/
+  const WARN=0.66;                       /* 重心偏到支撐面一半的 66% 就開始晃 */
+  const capSpan=b=>[b.x+b.p.tx-b.p.tw/2, b.x+b.p.tx+b.p.tw/2];
+  const footSpan=b=>[b.x+b.p.bx-b.p.bw/2, b.x+b.p.bx+b.p.bw/2];
+  function com(from){
+    let m=0,sx=0;
+    for(let j=from;j<tower.length;j++){ m+=tower[j].p.m; sx+=tower[j].p.m*(tower[j].x+tower[j].p.c); }
+    return sx/m;
+  }
+  function balance(){
+    let fail=-9, worst=0;
+    if(tower.length){                    /* 先看整座塔站不站得住（最底下那件的底面）*/
+      const [a,b]=footSpan(tower[0]);
+      const off=Math.abs(com(0)-(a+b)/2)/((b-a)/2);
+      worst=off; if(off>1.02) fail=-1;   /* -1 = 連最底下都撐不住，整座垮 */
+    }
+    for(let i=0;i<tower.length-1;i++){
+      const [a,b]=capSpan(tower[i]);
+      const off=Math.abs(com(i+1)-(a+b)/2)/((b-a)/2);
+      if(off>worst) worst=off;
+      if(off>1.02 && fail===-9) fail=i;
+    }
+    return {fail,worst};
+  }
+  function reflow(){
+    stackTop=baseY;
+    tower.forEach(b=>{ b.el.style.top=(stackTop-b.p.h/2)+"px"; stackTop-=b.p.h; });
+  }
+  function toPile(el){
+    el.classList.remove("set","fall");
+    el.style.left=el.dataset.ox+"px"; el.style.top=el.dataset.oy+"px";
+    el.style.setProperty("--sc",el.dataset.sc);
+    el.style.removeProperty("--fx"); el.style.removeProperty("--fy"); el.style.removeProperty("--fr");
+    el.style.zIndex="";
+  }
+  function showCom(x,y){                 /* 倒了才揭曉：重心原來在這裡 */
+    const m=document.createElement("div");
+    m.className="compin"; m.style.left=x+"px"; m.style.top=(y-58)+"px";
+    m.innerHTML=`<div class="bar"></div><div class="dot"></div><div class="lb">重心</div>`;
+    box.appendChild(m);
+    setTimeout(()=>m.remove(),1900);
+  }
+  function topple(from){
+    busy=true; sfx.fall();
+    const supY = from<0 ? baseY : (parseFloat(tower[from].el.style.top)-tower[from].p.h/2);
+    const cx = com(from<0?0:from+1);
+    const gone=tower.splice(from<0?0:from+1);
+    const dir = cx < (tower.length?tower[tower.length-1].x:W/2) ? -1 : 1;
+    gone.forEach((b,i)=>{
+      b.el.style.setProperty("--fx",(dir*(80+i*50))+"px");
+      b.el.style.setProperty("--fy",(baseY-parseFloat(b.el.style.top)+b.p.h/2)+"px");
+      b.el.style.setProperty("--fr",(dir*(45+i*30))+"deg");
+      b.el.classList.add("fall");
+    });
+    showCom(cx,supY); say("重心跑出去了");
+    setTimeout(()=>{ gone.forEach(b=>toPile(b.el)); reflow(); busy=false; },800);
+  }
+  function shake(){
+    tower.forEach(b=>{ b.el.classList.add("shake"); setTimeout(()=>b.el.classList.remove("shake"),520); });
+    sfx.soft();
+  }
+
+  dragify(box,".blk",(el,x,y,back)=>{
+    if(busy){ back(); return; }
+    if(y>pileTop){ back(); return; }                       /* 沒舉到上面：安靜放回 */
+    const p=P[+el.dataset.k];
+    let cx=Math.max(p.w/2+4, Math.min(W-p.w/2-4, x));
+    const lvl=tower.length;
+    if(lvl){
+      const t=tower[lvl-1], [ta,tb]=capSpan(t);
+      const a=cx+p.bx-p.bw/2, b=cx+p.bx+p.bw/2;
+      const ov=Math.min(b,tb)-Math.max(a,ta);
+      if(TOPPLE){
+        if(ov < Math.min(b-a, tb-ta)*OVER){                /* 根本沒搭到：滑下去 */
+          back(); el.classList.add("wob"); setTimeout(()=>el.classList.remove("wob"),440);
+          sfx.soft(); return;
+        }
+      }else{
+        /* 小熊版永遠不會失敗：放歪了就自己滾到下面那塊上面 */
+        const tc=(ta+tb)/2, lim=(tb-ta)*.35;
+        cx=Math.max(tc-lim,Math.min(tc+lim,cx))-p.bx;
+        cx=cx+(tc-p.bx-cx)*0.45;
+      }
+    }
+    el.style.left=cx+"px";
+    el.style.setProperty("--sc","1");
+    el.style.zIndex=String(20+lvl);
+    el.classList.add("set");
+    tower.push({el,p,x:cx});
+    reflow();
+    sfx.step(lvl+1); sayNum(lvl+1);
+
+    const {fail,worst}=balance();
+    if(TOPPLE && fail!==-9){ setTimeout(()=>topple(fail),300); return; }
+    if(worst>WARN) setTimeout(shake,240);
+    if(tower.length===cnt) setTimeout(()=>{
+      sfx.cheer(); say("疊了"+zh(cnt)+"層");
+      setTimeout(nextRound,1500);
+    },500);
+  });
+  return null;
+}
+
+/* ═══════════ 遊戲七：記憶翻牌 ═══════════ */
+function buildMem(){
+  const big=game==="memL";
+  const pairs=big?8:3;
+  const pool=big?["🐲","🦖","🐢","🐙","🦊","🍄","🥚","⚡","🐝","🗿"]:ART;
+  const pick=pickN(pool,pairs);
+  const deck=shuffle(pick.concat(pick));
+  const cols=big?4:3;
+  stage.innerHTML=`<div class="memw" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">`+
+    deck.map((e,i)=>`<div class="mcard" data-i="${i}" data-e="${e}">`+
+      `<div class="mface mback"></div><div class="mface mfront">${e}</div></div>`).join("")+`</div>`;
+  const w=stage.querySelector(".memw");
+  w.style.aspectRatio = cols+" / "+Math.ceil(deck.length/cols);
+  let a=null,b=null,lock=false,done=0;
+  w.addEventListener("click",e=>{
+    audio();
+    const c=e.target.closest(".mcard");
+    if(!c||lock||c.classList.contains("open")||c.classList.contains("gone")) return;
+    c.classList.add("open"); sfx.tap();
+    if(!a){ a=c; return; }
+    b=c; lock=true;
+    if(a.dataset.e===b.dataset.e){
+      const x=a,y=b;
+      setTimeout(()=>{ x.classList.add("gone"); y.classList.add("gone"); },420);
+      sfx.yes(); say(one(PRAISE));
+      a=b=null; lock=false;
+      if(++done===pairs) setTimeout(()=>{ sfx.cheer(); setTimeout(nextRound,900); },500);
+    }else{
+      const x=a,y=b; a=b=null;
+      setTimeout(()=>{ x.classList.remove("open"); y.classList.remove("open"); lock=false; },950);
+      sfx.soft();
+    }
+  });
+  return null;
+}
+
+/* ═══════════ 遊戲八：天平 ═══════════ */
+const MONW=[["🐝",1],["⚡",1],["🥚",2],["🍄",2],["🦊",3],["🐙",3],["🐢",4],["🦖",6],["🐲",7],["🗿",8]];
+function combo(pool,target,maxLen){          /* 從 pool 裡找加起來剛好 target 的組合 */
+  const res=[];
+  (function go(i,left,acc){
+    if(res.length) return;
+    if(left===0&&acc.length){ res.push(acc.slice()); return; }
+    if(i>=pool.length||acc.length>=maxLen||left<0) return;
+    go(i+1,left-pool[i][1],acc.concat([i]));
+    go(i+1,left,acc);
+  })(0,target,[]);
+  return res[0]||null;
+}
+function buildScale(){
+  let fixed=null, sol=null, tray=null, T=0;
+  for(let t=0;t<60 && !fixed;t++){
+    const pool=shuffle(MONW.slice());
+    const solN=2+(Math.random()*2|0);                 /* 答案用 2～3 隻 */
+    sol=pool.slice(0,solN);
+    T=sol.reduce((a,m)=>a+m[1],0);
+    if(T<3||T>12){ fixed=null; continue; }
+    const rest=pool.slice(solN);
+    const idx=combo(rest,T,2);                        /* 固定那邊用 1～2 隻 */
+    if(idx) fixed=idx.map(i=>rest[i]);
+    if(fixed){
+      const spare=rest.filter((_,i)=>!idx.includes(i));
+      tray=shuffle(sol.concat(spare.slice(0,2)));
+    }
+  }
+  if(!fixed){ fixed=[["🗿",8]]; sol=[["🦖",6],["🥚",2]]; T=8; tray=shuffle(sol.concat([["🦊",3],["🐝",1]])); }
+
+  const mon=(e,w,cls)=>`<span class="mon${cls?" "+cls:""}" data-w="${w}" data-e="${e}">${e}<i class="wt">${w}</i></span>`;
+  stage.innerHTML=`<div class="scalew"><div class="scaleTop">
+      <div class="stand"></div>
+      <div class="beam" style="--deg:0deg">
+        <div class="pan l"><div class="rope"></div><div class="dish" data-s="l">${fixed.map(m=>mon(m[0],m[1])).join("")}</div></div>
+        <div class="pan r"><div class="rope"></div><div class="dish" data-s="r"></div></div>
+      </div></div>
+      <div class="pool">${tray.map(m=>mon(m[0],m[1])).join("")}</div></div>`;
+  const wrap=stage.querySelector(".scalew"), beam=stage.querySelector(".beam");
+  const dishR=stage.querySelector('.dish[data-s="r"]'), pool=stage.querySelector(".pool");
+  const sumOf=el=>[...el.querySelectorAll(".mon")].reduce((a,m)=>a+ +m.dataset.w,0);
+  let settled=false;
+  function refresh(){
+    const R=sumOf(dishR), d=Math.max(-1,Math.min(1,(R-T)/Math.max(T,1)));
+    beam.style.setProperty("--deg",(d*14).toFixed(1)+"deg");
+    stage.querySelectorAll(".pan").forEach(p=>p.style.setProperty("--deg",(d*14).toFixed(1)+"deg"));
+    if(R===T && !settled){
+      settled=true; sfx.cheer(); say("一樣重了");
+      setTimeout(nextRound,1600);
+    }
+  }
+  wrap.addEventListener("click",e=>{
+    audio();
+    const m=e.target.closest(".mon"); if(!m||settled) return;
+    if(m.closest(".pool")){                            /* 從料架放到右盤 */
+      if(m.classList.contains("used")) return;
+      const c=m.cloneNode(true); c.dataset.from=[...pool.children].indexOf(m);
+      m.classList.add("used"); dishR.appendChild(c); sfx.step(1);
+    }else if(m.closest('.dish[data-s="r"]')){          /* 從右盤拿回來 */
+      const i=+m.dataset.from; const src=pool.children[i];
+      if(src) src.classList.remove("used");
+      m.remove(); sfx.tap();
+    }else return;
+    refresh();
+  });
+  refresh();
+  return null;
+}
+
+/* ═══════════ 遊戲九：湊十 ═══════════ */
+function buildTen(){
+  /* 用不重複的 a 產生 6 組，才不會整盤都是 4+6，也保證有 1+9、3+7 這種奇數組 */
+  const P=6, nums=[];
+  shuffle([1,2,3,4,5,6,7,8,9]).slice(0,P).forEach(a=>nums.push(a,10-a));
+  const deck=shuffle(nums);
+  const cols=4;
+  stage.innerHTML=`<div class="tenw" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">`+
+    deck.map((n,i)=>`<div class="tcard" data-i="${i}" data-n="${n}"><span class="n">${n}</span>`+
+      `<span class="dots">${"<i></i>".repeat(n)}</span></div>`).join("")+`</div>`;
+  const w=stage.querySelector(".tenw");
+  w.style.aspectRatio = cols+" / "+Math.ceil(deck.length/cols);
+  let sel=null, left=P;
+  w.addEventListener("click",e=>{
+    audio();
+    const c=e.target.closest(".tcard");
+    if(!c||c.classList.contains("gone")) return;
+    if(c===sel){ c.classList.remove("pick"); sel=null; return; }
+    if(!sel){ sel=c; c.classList.add("pick"); sfx.tap(); return; }
+    const s=+sel.dataset.n + +c.dataset.n;
+    if(s===10){
+      const x=sel; sel=null; x.classList.remove("pick");
+      x.classList.add("gone"); c.classList.add("gone");
+      sfx.yes(); say(zh(+x.dataset.n)+"加"+zh(+c.dataset.n)+"等於十");
+      if(--left===0) setTimeout(()=>{ sfx.cheer(); setTimeout(nextRound,900); },600);
+    }else{
+      c.classList.add("nudge"); sel.classList.add("nudge");
+      const x=sel; setTimeout(()=>{ c.classList.remove("nudge"); x.classList.remove("nudge"); },440);
+      sel.classList.remove("pick"); sel=null; sfx.soft();
+    }
+  });
+  return null;
+}
+
+/* ═══════════ 遊戲十一：尺分兩堆 ═══════════
+   一堆同樣的樹果，用一把尺推開成兩堆，尺停在哪裡就是分界。
+   推完按「數一數」，唸出 12 = 5 + 7 —— 這是數的分解，加減法的底。 */
+function buildRuler(){
+  const n = 8 + (Math.random()*7|0);                 /* 8～14 顆 */
+  const kind = Math.random()<.5?"r":"g";
+  stage.innerHTML=`<div class="rulerw"></div>
+    <div class="rulerbar"><button class="btn" id="countBtn">數一數</button></div>`;
+  stage.style.flexDirection="column";
+  const box=stage.querySelector(".rulerw");
+  const W=box.clientWidth, H=box.clientHeight;
+  const S=Math.max(20,Math.min(44, Math.min(W,H)*0.075*Math.sqrt(10/n)));
+  const RW=Math.max(24,Math.min(38,W*0.036));        /* 尺的寬度 */
+  const pad=S;
+
+  /* 樹果一開始混在中間；hx 是它原本的位置，尺經過時才被撥開，尺走了就回去 */
+  for(let i=0;i<n;i++){
+    const b=document.createElement("div");
+    b.className="bean"; b.dataset.t=kind;
+    const x=W*.18+Math.random()*W*.64, y=H*.18+Math.random()*H*.64;
+    b.dataset.hx=x;
+    b.style.cssText=`left:${x}px;top:${y}px;width:${S}px;height:${S*.82}px;--r:${(Math.random()*60-30)|0}deg`;
+    box.appendChild(b);
+  }
+  const beans=[...box.querySelectorAll(".bean")];
+
+  const ruler=document.createElement("div");
+  ruler.className="ruler";
+  let rx=W*0.10;                                     /* 尺一開始放在左邊，讓小孩自己推過去 */
+  ruler.style.left=rx+"px";
+  box.appendChild(ruler);
+
+  /* 尺是分界線：經過的樹果往它原本那一側被撥開，尺移走就回到原位。
+     所以尺往右滑 → 左邊那堆變多，兩堆的數字跟著變，這就是數的分解。 */
+  const half=RW/2+S*0.55;
+  function layout(){
+    beans.forEach(b=>{
+      const hx=+b.dataset.hx, d=hx-rx;
+      const nx = Math.abs(d)<half ? rx+(d<0?-half:half) : hx;
+      b.style.left=Math.max(pad,Math.min(W-pad,nx))+"px";
+    });
+  }
+  let pid=null, grabDx=0, busy=false;
+  ruler.addEventListener("pointerdown",e=>{
+    if(pid!==null||busy) return;
+    audio(); pid=e.pointerId;
+    grabDx=e.clientX-box.getBoundingClientRect().left-rx;
+    ruler.classList.add("grab");
+    try{ ruler.setPointerCapture(e.pointerId); }catch(err){}
+  });
+  ruler.addEventListener("pointermove",e=>{
+    if(e.pointerId!==pid) return;
+    const b=box.getBoundingClientRect();
+    rx=Math.max(RW/2+2, Math.min(W-RW/2-2, e.clientX-b.left-grabDx));
+    ruler.style.left=rx+"px";
+    layout();
+  });
+  const end=e=>{ if(e.pointerId===pid){ pid=null; ruler.classList.remove("grab"); } };
+  ruler.addEventListener("pointerup",end);
+  ruler.addEventListener("pointercancel",end);
+  layout();
+
+  const timers=[];
+  function toast(msg){
+    const t=document.createElement("div"); t.className="toast"; t.textContent=msg;
+    box.appendChild(t); timers.push(setTimeout(()=>t.remove(),1600));
+  }
+  $("#countBtn").addEventListener("click",()=>{
+    if(busy) return;
+    audio();
+    const by=(a,b)=>(+a.dataset.hx)-(+b.dataset.hx);
+    const L=beans.filter(b=>+b.dataset.hx<rx).sort(by);
+    const R=beans.filter(b=>+b.dataset.hx>=rx).sort(by);
+    if(!L.length||!R.length){                        /* 還沒分成兩堆 */
+      ruler.classList.add("wob"); setTimeout(()=>ruler.classList.remove("wob"),440);
+      sfx.soft(); toast("兩邊都要有喔"); return;
+    }
+    busy=true; $("#countBtn").disabled=true;
+    beans.forEach(b=>b.classList.add("dim"));
+    const seq=[...L,...R]; let cl=0, cr=0;
+    seq.forEach((b,i)=>timers.push(setTimeout(()=>{
+      b.classList.add("lit");
+      const k = i<L.length ? ++cl : ++cr;
+      sfx.step(k); sayNum(k);
+    }, i*420)));
+    const t0=seq.length*420;
+    timers.push(setTimeout(()=>{
+      const note=document.createElement("div");
+      note.className="tape-note";
+      note.innerHTML=`<div class="l1">${n} = ${L.length} + ${R.length}</div>`+
+        `<div class="l2">${L.length===R.length?"一樣多！":"分成兩堆了"}</div>`;
+      box.appendChild(note);
+      sfx.cheer(); say(zh(n)+"可以分成"+zh(L.length)+"和"+zh(R.length));
+    }, t0+400));
+    timers.push(setTimeout(nextRound, t0+2800));
+  });
+  return ()=>{ timers.forEach(clearTimeout); stage.style.flexDirection=""; };
+}
+
+/* ═══════════ 遊戲十二：畫線救狗狗 ═══════════
+   畫一條線當屏障，擋住掉下來的蜜蜂，別讓牠們碰到狗狗。線的長度有限，要想清楚畫在哪。
+   蜜蜂是會受重力、會彈跳的圓；畫出來的線、地面、障礙都是它撞得到的線段。 */
+/* 蜜蜂會飛、會繞，所以屏障要「圍」起來：靠地形、靠物件、或自己畫個罩子。
+   地形 10 種 × 物件 8 種＝80 種組合，每次開始隨機配，一輪之內不重複。 */
+const TERRAINS=[
+  {n:"平地",  t:[[0,.94],[1,.94]],                                         d:.50},
+  {n:"左台階",t:[[0,.74],[.40,.74],[.46,.94],[1,.94]],                     d:.20},
+  {n:"右台階",t:[[0,.94],[.54,.94],[.60,.74],[1,.74]],                     d:.80},
+  {n:"高台",  t:[[0,.94],[.30,.94],[.36,.70],[.64,.70],[.70,.94],[1,.94]], d:.50},
+  {n:"凹坑",  t:[[0,.82],[.32,.82],[.36,.97],[.64,.97],[.68,.82],[1,.82]], d:.50},
+  {n:"斜坡",  t:[[0,.72],[1,.95]],                                         d:.74},
+  {n:"山谷",  t:[[0,.72],[.50,.96],[1,.72]],                               d:.50},
+  {n:"小丘",  t:[[0,.94],[.28,.94],[.50,.76],[.72,.94],[1,.94]],           d:.50},
+  {n:"雙階",  t:[[0,.70],[.28,.70],[.34,.84],[.62,.84],[.68,.95],[1,.95]], d:.15},
+  {n:"窄柱台",t:[[0,.94],[.40,.94],[.44,.70],[.56,.70],[.60,.94],[1,.94]], d:.50}
+];
+const OBJS=[
+  {n:"空曠", b:[]},
+  {n:"左柱", b:[[.16,.50,.055,.46]]},
+  {n:"右柱", b:[[.79,.50,.055,.46]]},
+  {n:"雙柱", b:[[.16,.50,.055,.46],[.79,.50,.055,.46]]},
+  {n:"浮板", b:[[.30,.44,.40,.045]]},
+  {n:"雙簷", b:[[0,.34,.30,.045],[.70,.34,.30,.045]]},
+  {n:"石頭", b:[[.24,.82,.09,.09],[.68,.82,.09,.09]]},
+  {n:"高柱", b:[[.47,.24,.06,.36]]}
+];
+let saveUsed=new Set();
+function genSave(){
+  let T,O,key,guard=0;
+  do{
+    T=TERRAINS[Math.random()*TERRAINS.length|0];
+    O=OBJS[Math.random()*OBJS.length|0];
+    key=T.n+"/"+O.n;
+    /* 物件不能壓在狗身上 */
+    var clash=O.b.some(b=>T.d>b[0]-.09 && T.d<b[0]+b[2]+.09 && b[1]+b[3]>.60);
+  }while((saveUsed.has(key)||clash) && ++guard<80);
+  saveUsed.add(key);
+  const nb=4+(Math.random()*4|0), bees=[];            /* 4～7 隻，各難度相同 */
+  for(let i=0;i<nb;i++) bees.push([.10+ (i+ .5)/nb*.80 + (Math.random()-.5)*.10, .05+Math.random()*.11]);
+  return {terr:T.t, dogx:T.d, boxes:O.b, bees, ink:.50+Math.random()*.22, name:T.n+"＋"+O.n};
+}
+function buildSave(){
+  const lv=genSave();
+  stage.innerHTML=`<div class="savew"><canvas></canvas><div class="inkbar"><i></i></div></div>
+    <div class="savebar"><button class="btn ghost" id="redraw">重畫</button>
+      <span class="savetip">用手指畫一條線擋住蜜蜂</span></div>`;
+  stage.style.flexDirection="column";
+  const wrap=stage.querySelector(".savew"), cv=wrap.querySelector("canvas");
+  const inkEl=wrap.querySelector(".inkbar"), inkFill=inkEl.querySelector("i");
+  const W=wrap.clientWidth, H=wrap.clientHeight, dpr=Math.min(2,devicePixelRatio||1);
+  cv.width=W*dpr; cv.height=H*dpr;
+  const ctx=cv.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0);
+
+  const U=Math.min(W,H);
+  const RB=U*0.035, RD=U*0.075;                    /* 蜜蜂半徑、狗狗半徑 */
+  /* 狗狗也是物理物體：會下落、會滾、會被防護罩推走。地形與物件是鎖死的，不動 */
+  const DR=RD*0.72, MD=120;                        /* 狗的碰撞半徑與質量（比防護罩輕，推得動） */
+  const terr=lv.terr.map(p=>[p[0]*W,p[1]*H]);
+  const boxes=lv.boxes.map(b=>({x:b[0]*W,y:b[1]*H,w:b[2]*W,h:b[3]*H}));
+  function groundYAt(x){
+    let y=H;
+    for(let i=1;i<terr.length;i++){
+      const a=terr[i-1], b=terr[i];
+      if(x>=Math.min(a[0],b[0]) && x<=Math.max(a[0],b[0])){
+        const t=(x-a[0])/((b[0]-a[0])||1);
+        y=Math.min(y, a[1]+(b[1]-a[1])*t);
+      }
+    }
+    return y;
+  }
+  const DX=lv.dogx*W;
+  const dog={x:DX, y:groundYAt(DX)-DR-2, vx:0, vy:0, ang:0};
+  const inkMax=lv.ink*(W+H)/2;
+  let ink=inkMax, stroke=[], drawing=false, pid=null;
+  let bees=[], body=null, phase="draw", t0=0, raf2=null, frames=0;
+  let spin=1;                                        /* 這一輪蜂群統一要把罩子往哪邊扳 */
+  const SURV=10000;                                   /* 撐 10 秒就算保護成功（各難度相同） */
+  const RS=Math.max(4,U*0.011);                       /* 防護罩線的半徑（碰撞用） */
+  const tip=stage.querySelector(".savetip");
+
+  /* 蜜蜂用的線段表：地形折線 + 物件四邊 + 左右邊界 */
+  const beeSegs=(()=>{
+    const s=[[[0,0],[0,H]],[[W,0],[W,H]]];
+    for(let i=1;i<terr.length;i++) s.push([terr[i-1],terr[i]]);
+    boxes.forEach(r=>s.push([[r.x,r.y],[r.x+r.w,r.y]],[[r.x,r.y+r.h],[r.x+r.w,r.y+r.h]],
+                            [[r.x,r.y],[r.x,r.y+r.h]],[[r.x+r.w,r.y],[r.x+r.w,r.y+r.h]]));
+    return s;
+  })();
+  /* 一個圓點碰到所有不動的東西時，回報接觸點、法線、穿透量（isG＝踩到地形） */
+  function eachStatic(px,py,r,cb){
+    for(let i=1;i<terr.length;i++){
+      const a=terr[i-1], b=terr[i];
+      const dx=b[0]-a[0], dy=b[1]-a[1], L2=dx*dx+dy*dy||1;
+      let t=((px-a[0])*dx+(py-a[1])*dy)/L2; t=Math.max(0,Math.min(1,t));
+      const qx=a[0]+dx*t, qy=a[1]+dy*t;
+      let nx=px-qx, ny=py-qy, d=Math.hypot(nx,ny);
+      if(d<r){ if(d<.0001){nx=0;ny=-1;d=1;} cb(qx,qy,nx/d,ny/d,r-d,true); }
+    }
+    boxes.forEach(rc=>{
+      const qx=Math.max(rc.x,Math.min(rc.x+rc.w,px)), qy=Math.max(rc.y,Math.min(rc.y+rc.h,py));
+      let nx=px-qx, ny=py-qy, d=Math.hypot(nx,ny);
+      if(d>=r) return;
+      if(d<.0001){                                    /* 點在物件裡：往最薄的方向推出去 */
+        const L=[px-rc.x, rc.x+rc.w-px, py-rc.y, rc.y+rc.h-py], k=L.indexOf(Math.min(...L));
+        cb(px,py,[-1,1,0,0][k],[0,0,-1,1][k],r+L[k],false); return;
+      }
+      cb(qx,qy,nx/d,ny/d,r-d,false);
+    });
+    if(px<r)   cb(0,py,1,0,r-px,false);
+    if(px>W-r) cb(W,py,-1,0,px-(W-r),false);
+  }
+
+  /* ── 防護罩成形＝變成一個剛體：有質心、有重量、有轉動慣量。
+        直立的半圓重心偏高、著地點小，重力的力矩會讓它慢慢傾倒——
+        這不是寫死的規則，是算出來的。 ── */
+  function makeBody(pts){
+    const rs=[pts[0]]; let acc=0;                     /* 重新取樣，物理點距約 14px */
+    for(let i=1;i<pts.length;i++){
+      acc+=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);
+      if(acc>=14){ rs.push(pts[i]); acc=0; }
+    }
+    if(rs.length<2) rs.push([pts[pts.length-1][0]+2,pts[pts.length-1][1]]);
+    let m=0,cx=0,cy=0;
+    for(let i=1;i<rs.length;i++){                     /* 質心：線段長度加權 */
+      const L=Math.hypot(rs[i][0]-rs[i-1][0],rs[i][1]-rs[i-1][1]);
+      m+=L; cx+=L*(rs[i][0]+rs[i-1][0])/2; cy+=L*(rs[i][1]+rs[i-1][1])/2;
+    }
+    cx/=m; cy/=m;
+    let I=0;
+    for(let i=1;i<rs.length;i++){
+      const mx=(rs[i][0]+rs[i-1][0])/2-cx, my=(rs[i][1]+rs[i-1][1])/2-cy;
+      const L=Math.hypot(rs[i][0]-rs[i-1][0],rs[i][1]-rs[i-1][1]);
+      I+=L*(mx*mx+my*my);
+    }
+    I=Math.max(I, m*RS*RS*6);
+    /* 質量只影響「推不推得動」，不影響重力與傾倒；調輕一點讓蜂群撼動得了 */
+    m*=0.55; I*=0.55;
+    return {loc:rs.map(p=>[p[0]-cx,p[1]-cy]), x:cx, y:cy, th:0, vx:0, vy:0, om:0, m, I};
+  }
+  function worldPts(B){
+    const c=Math.cos(B.th), s=Math.sin(B.th);
+    return B.loc.map(p=>[B.x+p[0]*c-p[1]*s, B.y+p[0]*s+p[1]*c]);
+  }
+  /* 剛體接觸：位置推出＋衝量（含摩擦）。接觸點離質心越偏，轉動越多 → 會傾倒 */
+  function contact(B,px,py,nx,ny,pen,e,mu){
+    B.x+=nx*pen*.28; B.y+=ny*pen*.28;
+    const rx=px-B.x, ry=py-B.y;
+    const vpx=B.vx-B.om*ry, vpy=B.vy+B.om*rx;
+    const vn=vpx*nx+vpy*ny;
+    if(vn>=0) return;
+    const rn=rx*ny-ry*nx, k=1/B.m+rn*rn/B.I;
+    const j=-(1+e)*vn/k;
+    B.vx+=j*nx/B.m; B.vy+=j*ny/B.m; B.om+=j*rn/B.I;
+    const tx=-ny, ty=nx, vt=vpx*tx+vpy*ty, rt=rx*ty-ry*tx;
+    const jt=Math.max(-mu*j,Math.min(mu*j, -vt/(1/B.m+rt*rt/B.I)));
+    B.vx+=jt*tx/B.m; B.vy+=jt*ty/B.m; B.om+=jt*rt/B.I;
+  }
+  function bodyStep(B){
+    B.vy+=U*0.00033;                                  /* 防護罩的重力 */
+    B.vx*=.995; B.vy*=.998; B.om*=.985;
+    B.x+=B.vx; B.y+=B.vy; B.th+=B.om;
+    let grounded=false;
+    for(let it=0;it<2;it++){
+      worldPts(B).forEach(p=>{
+        eachStatic(p[0],p[1],RS,(qx,qy,nx,ny,pen,isG)=>{
+          if(isG) grounded=true;
+          contact(B,qx,qy,nx,ny,pen,.05,.5);
+        });
+      });
+    }
+    if(grounded) B.vx*=.975;                           /* 貼地摩擦：推得動，但不會滑得像在冰上 */
+  }
+
+  /* 狗狗的物理：重力、落地、沿斜坡滾、被防護罩推 */
+  function dogStep(){
+    dog.vy+=U*0.00040; dog.vx*=.992;
+    dog.x+=dog.vx; dog.y+=dog.vy;
+    const hitD=(px,py,nx,ny,pen,mu)=>{
+      dog.x+=nx*pen; dog.y+=ny*pen;
+      const vn=dog.vx*nx+dog.vy*ny;
+      if(vn<0){
+        dog.vx-=1.12*vn*nx; dog.vy-=1.12*vn*ny;       /* 微彈：掉下來會彈一下 */
+        const tx=-ny, ty=nx, vt=dog.vx*tx+dog.vy*ty;
+        dog.vx-=vt*tx*mu; dog.vy-=vt*ty*mu;           /* 摩擦：斜面上會滾下去 */
+      }
+    };
+    for(let it=0;it<3;it++){
+      eachStatic(dog.x,dog.y,DR,(qx,qy,nx,ny,pen)=>hitD(qx,qy,nx,ny,pen,.10));
+      /* 狗 vs 防護罩：兩個都有質量的真碰撞，力與反作用力都算進去 */
+      if(body) worldPts(body).forEach((p,i,arr)=>{
+        if(i===0) return;
+        const a=arr[i-1], bx=p[0]-a[0], by=p[1]-a[1], L2=bx*bx+by*by||1;
+        let t=((dog.x-a[0])*bx+(dog.y-a[1])*by)/L2; t=Math.max(0,Math.min(1,t));
+        const px=a[0]+bx*t, py=a[1]+by*t;
+        let nx=dog.x-px, ny=dog.y-py, d=Math.hypot(nx,ny);
+        const r=DR+RS;
+        if(d>=r) return;
+        if(d<.0001){ nx=0; ny=-1; d=1; }
+        nx/=d; ny/=d;
+        const rx=px-body.x, ry=py-body.y;
+        const spx=body.vx-body.om*ry, spy=body.vy+body.om*rx;   /* 罩子在接觸點的速度 */
+        const rvx=dog.vx-spx, rvy=dog.vy-spy;
+        const vn=rvx*nx+rvy*ny;
+        if(vn<0){
+          const rn=rx*ny-ry*nx, k=1/body.m+rn*rn/body.I+1/MD;
+          const j=-1.05*vn/k;
+          dog.vx+=j*nx/MD; dog.vy+=j*ny/MD;
+          body.vx-=j*nx/body.m; body.vy-=j*ny/body.m; body.om-=j*rn/body.I;
+          const tx=-ny, ty=nx, vt=rvx*tx+rvy*ty, rt=rx*ty-ry*tx;
+          const jt=Math.max(-.45*j,Math.min(.45*j,-vt/k));
+          dog.vx+=jt*tx/MD; dog.vy+=jt*ty/MD;
+          body.vx-=jt*tx/body.m; body.vy-=jt*ty/body.m; body.om-=jt*rt/body.I;
+        }
+        dog.x+=nx*(r-d)*.62; dog.y+=ny*(r-d)*.62;               /* 位置分離：重的少讓一點 */
+        body.x-=nx*(r-d)*.38; body.y-=ny*(r-d)*.38;
+      });
+    }
+    dog.ang += dog.vx/DR;                              /* 滾動角＝位移/半徑，滾起來才對 */
+  }
+
+  function reset(){
+    dog.x=DX; dog.y=groundYAt(DX)-DR-2; dog.vx=0; dog.vy=0; dog.ang=0;
+    /* 分工：0 直接撲狗、1 找破口鑽、2 去頂槓桿最長的地方把罩子扳倒 */
+    bees=lv.bees.map((b,i)=>({x:b[0]*W, y:b[1]*H, vx:0, vy:SPD, w:Math.random()*6.28,
+      role:i%3, hold:0, side:Math.random()<.5?-1:1, blocked:0, stuck:0, tx:1, ty:0}));
+    wrap._bees=bees; wrap._dog=dog; wrap._getBody=()=>body;
+    phase="draw"; stroke=[]; body=null; ink=inkMax; frames=0;
+    spin=Math.random()<.5?-1:1;
+    inkEl.classList.remove("out"); inkFill.style.width="100%";
+    tip.textContent="用手指畫一條線擋住蜜蜂";
+    draw();
+  }
+  /* 圓 vs 線段：推出去，然後把速度投影到表面上 → 蜜蜂會「沿著障礙滑」，
+     滑到盡頭就繞過去，所以牠會自己找空隙鑽。屏障沒圍起來是擋不住的。 */
+  function hitSeg(b,seg,r){
+    const [ax,ay]=seg[0],[bx,by]=seg[1];
+    const dx=bx-ax, dy=by-ay, L2=dx*dx+dy*dy||1;
+    let t=((b.x-ax)*dx+(b.y-ay)*dy)/L2; t=Math.max(0,Math.min(1,t));
+    const px=ax+dx*t, py=ay+dy*t;
+    let nx=b.x-px, ny=b.y-py, d=Math.hypot(nx,ny);
+    if(d>=r) return false;
+    if(d<.0001){ nx=0; ny=-1; d=1; }
+    nx/=d; ny/=d;
+    b.x=px+nx*r; b.y=py+ny*r;
+    const vn=b.vx*nx+b.vy*ny;
+    if(vn<0){
+      b.vx-=vn*nx; b.vy-=vn*ny;                       /* 去掉撞進去的分量＝貼著滑 */
+      /* 記住牆的方向，沿著牆走到盡頭；正面撞上時用自己偏好的那一邊 */
+      let tx=-ny, ty=nx;
+      const along=b.vx*tx+b.vy*ty;
+      if(Math.abs(along)<SPD*0.25){ tx*=b.side; ty*=b.side; }
+      else if(along<0){ tx=-tx; ty=-ty; }
+      b.tx=tx; b.ty=ty; b.blocked=16;
+    }
+    lastHit={px,py,nx,ny};
+    return true;
+  }
+  let lastHit=null;
+  const SPD=U*0.0050;                                 /* 飛行速度 */
+  const BPUSH=U*0.0230*(saveCfg.pct/100);             /* 蜜蜂推防護罩的力道（依難度縮放） */
+  const RBc=RB*0.58;                                  /* 碰撞用的身體比看起來小：縫隙夠大就鑽得過去 */
+  /* 罩子上離重心最遠的那一點＝槓桿最長的地方＝最容易被扳倒的弱點；
+     兩端則是可以繞過去的破口。蜜蜂會分工去找這兩種弱點。 */
+  function weakSpots(wp,B){
+    /* 要扳倒一個站著的東西，該推的是「最高的地方」——對底部支點的力臂最長。
+       推貼地的兩端只會被地面撐死，那是白費力氣。 */
+    let tip=wp[0], best=1e9;
+    wp.forEach(p=>{ if(p[1]<best){ best=p[1]; tip=p; } });
+    return {tip, ends:[wp[0], wp[wp.length-1]]};
+  }
+  function step2(){
+    if(body) bodyStep(body);                          /* 防護罩自己的重量與傾倒 */
+    dogStep();                                        /* 狗狗也受重力、會滾、會被推 */
+    const S=beeSegs;
+    const BS=[]; let bwp=null, weak=null;
+    if(body){
+      bwp=worldPts(body);
+      for(let i=1;i<bwp.length;i++) BS.push([bwp[i-1],bwp[i]]);
+      weak=weakSpots(bwp,body);
+    }
+    /* 蜂群戰術：先分頭找弱點；3 秒還沒突破就全員集中攻同一個點。
+       散開來推力會互相抵消，集中才推得倒——這是蜂群真正的威脅所在。 */
+    frames++;
+    if(body && frames>180) bees.forEach(b=>{ b.role=2; });
+    let caught=false;
+    bees.forEach(b=>{
+      let dx=dog.x-b.x, dy=dog.y-b.y;
+      const dd=Math.hypot(dx,dy)||1; dx/=dd; dy/=dd;   /* 朝狗狗的方向 */
+      let gx,gy;
+      if(b.blocked>0){                                /* 被擋住：沿著牆走，走到盡頭再轉向狗 */
+        b.blocked--; b.stuck++;
+        gx=b.tx; gy=b.ty;
+        if(b.stuck>240){ b.side*=-1; b.stuck=0; b.blocked=0; }   /* 走太久是死路，換邊 */
+      }else if(weak && dd>RD*2.2){                    /* 有罩子擋著：先去打弱點 */
+        let t = b.role===2 ? weak.tip
+              : b.role===1 ? (Math.hypot(weak.ends[0][0]-b.x,weak.ends[0][1]-b.y) <
+                              Math.hypot(weak.ends[1][0]-b.x,weak.ends[1][1]-b.y) ? weak.ends[0] : weak.ends[1])
+              : null;
+        if(t){
+          gx=t[0]-b.x; gy=t[1]-b.y; const l=Math.hypot(gx,gy)||1; gx/=l; gy/=l;
+          /* 已經頂在弱點上還過不去，就放棄這個弱點、直接撲狗 */
+          b.hold = l<RB*3 ? b.hold+1 : 0;
+          if(b.hold>110){ b.role=0; b.hold=0; }
+        } else { gx=dx; gy=dy; }
+        b.stuck=0;
+      }else{
+        b.stuck=0; gx=dx; gy=dy;
+      }
+      let hx=b.vx, hy=b.vy; const hl=Math.hypot(hx,hy)||1; hx/=hl; hy/=hl;
+      b.w+=0.16;
+      const wob=Math.sin(b.w)*0.30;                   /* 蜜蜂的擺動 */
+      hx += (gx-hx)*0.18 - gy*wob*0.08;
+      hy += (gy-hy)*0.18 + gx*wob*0.08;
+      const nl=Math.hypot(hx,hy)||1;
+      b.vx=hx/nl*SPD; b.vy=hy/nl*SPD;
+      b.x+=b.vx; b.y+=b.vy;
+      let touch=null;
+      for(let k=0;k<3;k++){
+        S.forEach(s=>hitSeg(b,s,RBc));
+        BS.forEach(s=>{ if(hitSeg(b,s,RBc+RS)) touch=lastHit; });
+      }
+      /* 貼到罩子上就持續施力。方向不是死命往狗狗壓——壓在圓罩正上方力矩是零，白費力；
+         聰明的推法是帶一個「讓罩子翻過去」的切向分量，所以貼哪裡都撼動得了。 */
+      if(touch && body){
+        const rx=touch.px-body.x, ry=touch.py-body.y, rl=Math.hypot(rx,ry)||1;
+        /* 整群往同一個方向扳：分開選方向會互相抵消，罩子反而紋風不動 */
+        const tx=-ry/rl*spin, ty=rx/rl*spin;
+        const ux=dx*0.35+tx*0.65, uy=dy*0.35+ty*0.65, ul=Math.hypot(ux,uy)||1;
+        const fx=ux/ul*BPUSH, fy=uy/ul*BPUSH;
+        body.vx+=fx/body.m; body.vy+=fy/body.m;
+        body.om+=(rx*fy-ry*fx)/body.I;
+      }
+      if(Math.hypot(b.x-dog.x,b.y-dog.y)<RB+RD*0.62) caught=true;   /* 要真的碰到，隔著線不算 */
+    });
+    if(caught) return "lose";
+    if(Date.now()-t0>SURV) return "win";              /* 撐過去就贏 */
+    return null;
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const sky=ctx.createLinearGradient(0,0,0,H);
+    sky.addColorStop(0,"#EDF6F4"); sky.addColorStop(1,"#DCEDE8");
+    ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle="#BFD9D2";                                         /* 地形 */
+    ctx.beginPath(); ctx.moveTo(terr[0][0],terr[0][1]);
+    terr.forEach(p=>ctx.lineTo(p[0],p[1]));
+    ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath(); ctx.fill();
+    ctx.fillStyle="#A9C9C0";                                         /* 物件 */
+    boxes.forEach(r=>{ ctx.beginPath(); ctx.roundRect(r.x,r.y,r.w,r.h,8); ctx.fill(); });
+    const line = body ? worldPts(body) : (stroke.length>1?stroke:null);
+    if(line){                                                        /* 玩家畫的防護罩 */
+      ctx.strokeStyle="#7B5EA7"; ctx.lineWidth=RS*2;
+      ctx.lineCap="round"; ctx.lineJoin="round";
+      ctx.beginPath(); ctx.moveTo(line[0][0],line[0][1]);
+      for(let i=1;i<line.length;i++) ctx.lineTo(line[i][0],line[i][1]);
+      ctx.stroke();
+    }
+    ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.save(); ctx.translate(dog.x,dog.y); ctx.rotate(dog.ang);   /* 滾動看得出來 */
+    ctx.font=(RD*2)+"px serif";
+    ctx.fillText(phase==="lose"?"😰":"🐶", 0, 0);
+    ctx.restore();
+    ctx.font=(RB*2.1)+"px serif";
+    bees.forEach(b=>ctx.fillText("🐝",b.x,b.y));
+  }
+  /* 用真實時間推進：不同平板的更新率不一樣，掉幀時也不會讓蜜蜂變慢 */
+  let last=0;
+  wrap._tick=n=>{ for(let i=0;i<n;i++){ const r=step2(); if(r) return r; } return null; };
+  function loop(){
+    const now=performance.now();
+    const n=last ? Math.max(1,Math.min(4,Math.round((now-last)/16.67))) : 1;
+    last=now;
+    let r=null;
+    for(let i=0;i<n && !r;i++) r=step2();
+    draw();
+    tip.textContent="撐住 "+Math.max(0,Math.ceil((SURV-(Date.now()-t0))/1000))+" 秒";
+    if(r==="lose"){
+      phase="lose"; draw(); sfx.fall(); say("被叮到了");
+      wrap.classList.add("shake"); setTimeout(()=>wrap.classList.remove("shake"),440);
+      setTimeout(()=>{ reset(); },1100);
+      return;
+    }
+    if(r==="win"){
+      phase="win"; draw(); sfx.cheer(); say("救到狗狗了");
+      setTimeout(nextRound,1500);
+      return;
+    }
+    raf2=requestAnimationFrame(loop);
+  }
+
+  const pt=e=>{ const r=cv.getBoundingClientRect(); return [e.clientX-r.left, e.clientY-r.top]; };
+  cv.addEventListener("pointerdown",e=>{
+    if(phase!=="draw"||pid!==null||ink<=2) return;
+    audio(); pid=e.pointerId; drawing=true; stroke=[pt(e)]; ink=inkMax;
+    inkEl.classList.remove("out"); inkFill.style.width="100%";
+    try{ cv.setPointerCapture(e.pointerId); }catch(err){}
+  });
+  cv.addEventListener("pointermove",e=>{
+    if(!drawing||e.pointerId!==pid) return;
+    const p=pt(e), last=stroke[stroke.length-1];
+    const d=Math.hypot(p[0]-last[0],p[1]-last[1]);
+    if(d<3) return;
+    if(ink-d<=0){                                    /* 墨水用完，線就到此為止 */
+      drawing=false; inkEl.classList.add("out"); inkFill.style.width="0%"; go(); return;
+    }
+    ink-=d; stroke.push(p);
+    inkFill.style.width=Math.max(0,ink/inkMax*100)+"%";
+    draw();
+  });
+  function go(){
+    if(phase!=="draw") return;
+    if(stroke.length<2){ stroke=[]; draw(); return; }
+    body=makeBody(stroke); stroke=[];                 /* 成形：從這一刻起有重量、會倒、推得動 */
+    phase="run"; t0=Date.now(); last=0;
+    cancelAnimationFrame(raf2); raf2=requestAnimationFrame(loop);
+  }
+  const endDraw=e=>{ if(e.pointerId!==pid) return; pid=null; if(drawing){ drawing=false; go(); } };
+  cv.addEventListener("pointerup",endDraw);
+  cv.addEventListener("pointercancel",endDraw);
+  $("#redraw").addEventListener("click",()=>{ audio(); sfx.tap(); cancelAnimationFrame(raf2); reset(); });
+
+  reset();
+  return ()=>{ cancelAnimationFrame(raf2); stage.style.flexDirection=""; };
+}
+
+/* ═══════════ 遊戲十：兩人對戰分樹果 ═══════════ */
+function buildDuel(){
+  stage.innerHTML=`<div class="duelw"><div class="mid"></div></div>`;
+  const box=stage.querySelector(".duelw");
+  const W=box.clientWidth, H=box.clientHeight, HW=W/2;
+  const zones={}, timers=[];
+  let over=false;
+
+  ["L","R"].forEach((z,zi)=>{
+    const x0=zi*HW, n=duelCfg[z];
+    const nr=Math.max(1,Math.min(n-1,Math.round(n*(0.35+Math.random()*0.3))));
+    const kinds=shuffle(Array.from({length:n},(_,i)=>i<nr?"r":"g"));
+    const S=Math.max(15,Math.min(40, Math.min(HW,H)*0.085*Math.sqrt(10/n)));
+    const bowl={x:x0+HW*.10,y:H*.03,w:HW*.80,h:H*.40};
+    const pw=Math.min(HW*.42,H*.36), ph=Math.min(H*.34,pw*.82);
+    const pl={r:{x:x0+HW*.05,y:H-ph-H*.04,w:pw,h:ph}, g:{x:x0+HW*.95-pw,y:H-ph-H*.04,w:pw,h:ph}};
+    const bw=document.createElement("div");
+    bw.className="bowl";
+    Object.assign(bw.style,{left:bowl.x+"px",top:bowl.y+"px",width:bowl.w+"px",height:bowl.h+"px"});
+    box.appendChild(bw);
+    ["r","g"].forEach(t=>{
+      const p=document.createElement("div");
+      p.className="plate"; p.dataset.t=t; p.dataset.z=z;
+      p.innerHTML=`<span class="tag">${t==="r"?"火 🔥":"草 🌿"}</span>`;
+      Object.assign(p.style,{left:pl[t].x+"px",top:pl[t].y+"px",width:pl[t].w+"px",height:pl[t].h+"px"});
+      box.appendChild(p);
+    });
+    kinds.forEach((t,i)=>{
+      const bx=bowl.x+S+Math.random()*(bowl.w-S*2);
+      const by=bowl.y+S+Math.random()*(bowl.h-S*2.2);
+      const b=document.createElement("div");
+      b.className="bean"; b.dataset.t=t; b.dataset.z=z; b.dataset.in="";
+      b.style.cssText=`left:${bx}px;top:${by}px;width:${S}px;height:${S*.82}px;--r:${(Math.random()*60-30)|0}deg`;
+      box.appendChild(b);
+    });
+    zones[z]={pl,n,S};
+  });
+
+  let zz=10;
+  dragify(box,".bean",(el,x,y,back)=>{
+    if(over) { back(); return; }
+    const z=el.dataset.z, t=el.dataset.t, P=zones[z].pl;
+    const hit = inRect(x,y,P.r)?"r" : inRect(x,y,P.g)?"g" : null;
+    el.style.zIndex=++zz;
+    if(hit && hit!==t){ back(); el.classList.add("wob"); setTimeout(()=>el.classList.remove("wob"),440); sfx.soft(); return; }
+    if(hit===t){
+      const p=P[t], cx=p.x+p.w/2, cy=p.y+p.h/2;
+      const rx=p.w/2-zones[z].S*.6, ry=p.h/2-zones[z].S*.5;
+      let dx=(x-cx)/rx, dy=(y-cy)/ry, d=Math.hypot(dx,dy);
+      if(d>.86){ const k=.86/d; x=cx+dx*rx*k; y=cy+dy*ry*k; }
+      el.style.left=x+"px"; el.style.top=y+"px"; el.dataset.in=t; sfx.yes();
+      const rest=[...box.querySelectorAll('.bean[data-z="'+z+'"]')].filter(b=>b.dataset.in!==b.dataset.t).length;
+      if(rest===0) win(z);
+    }else{
+      const lo=z==="L"?0:HW, hi=z==="L"?HW:W;      /* 只能待在自己那半邊 */
+      el.style.left=Math.max(lo+zones[z].S,Math.min(hi-zones[z].S,x))+"px";
+      el.style.top =Math.max(zones[z].S,Math.min(H-zones[z].S,y))+"px";
+      el.dataset.in="";
+    }
+  },true);                                          /* ← 兩個人可以同時拖 */
+
+  function win(z){
+    over=true;
+    box.querySelectorAll(".bean").forEach(b=>b.classList.add("set"));
+    const w=document.createElement("div");
+    w.className="winner";
+    w.innerHTML=`<div class="w1">${z==="L"?"⬅️":"➡️"}</div><div class="w2">${z==="L"?"左邊":"右邊"}贏了！</div>`;
+    box.appendChild(w);
+    sfx.cheer(); say(z==="L"?"左邊贏了":"右邊贏了");
+    timers.push(setTimeout(()=>finish((z==="L"?"左邊":"右邊")+"贏了！","再比一次？"),2000));
+  }
+  return ()=>timers.forEach(clearTimeout);
+}
+
+/* ═══════════ 流程 ═══════════ */
+function build(){
+  if(cleanup){ cleanup(); cleanup=null; }
+  askEl.textContent=GAMES[game].ask;
+  startClock(game==="sortL"?clockCarry:0);        /* 每一輪接著上一輪剩下的時間跑 */
+  if(game==="match"||game==="link"||game==="shadow") cleanup=buildPairs();
+  else if(game==="memS"||game==="memL") cleanup=buildMem();
+  else if(game==="scale") cleanup=buildScale();
+  else if(game==="ten") cleanup=buildTen();
+  else if(game==="duel") cleanup=buildDuel();
+  else if(game==="ruler") cleanup=buildRuler();
+  else if(game==="save") cleanup=buildSave();
+  else if(game==="dotsS"||game==="dotsL") cleanup=buildDots();
+  else if(game==="tally") cleanup=buildTally();
+  else if(game==="sortS"||game==="sortL") cleanup=buildSort();
+  else if(game==="stackS"||game==="stackL") cleanup=buildStack();
+  else cleanup=buildPlus();
+
+  /* 挑豆子與疊高高是用「建立當下的像素」排版的，平板轉向後會整個走位，
+     所以尺寸一變就重排這一題（星星進度保留，只有這一題重來）。 */
+  if(/^(sortS|sortL|stackS|stackL|duel|ruler|save)$/.test(game)){
+    const w0=stage.clientWidth, h0=stage.clientHeight, inner=cleanup;
+    let t=null;
+    const onResize=()=>{
+      clearTimeout(t);
+      t=setTimeout(()=>{
+        if(Math.abs(stage.clientWidth-w0)>24 || Math.abs(stage.clientHeight-h0)>24){
+          if(game==="sortL"&&sortCfg.sec) clockCarry=clockLeft();   /* 轉向重排不吃掉剩餘時間 */
+          build();
+        }
+      },280);
+    };
+    window.addEventListener("resize",onResize);
+    cleanup=()=>{ clearTimeout(t); window.removeEventListener("resize",onResize); if(inner) inner(); };
+  }
+}
+const setup=$("#setup");
+const N_OPTS=[10,30,50], T_OPTS=[[0,"不限"],[120,"120″"],[60,"60″"],[30,"30″"]];
+const D_OPTS=[6,10,14];
+const S_OPTS=[[50,"50% 弱"],[70,"70% 中"],[100,"100% 強"]];   /* 只改蜜蜂力量 */
+let setupKind="sort";
+function renderSetup(){
+  const duel=setupKind==="duel", sv=setupKind==="save";
+  const rows=setup.querySelectorAll(".optrow");
+  $("#setupTitle").textContent = sv?"畫線救狗狗":(duel?"兩人對戰":"分樹果");
+  rows[1].classList.toggle("hidden", sv);          /* 難度只有一排選項 */
+  setup.querySelectorAll(".olbl")[0].textContent = sv?"蜂力":(duel?"左邊":"幾顆");
+  if(!sv) setup.querySelectorAll(".olbl")[1].textContent = duel?"右邊":"限時";
+  $("#optN").innerHTML = sv
+    ? S_OPTS.map(([v,t])=>`<button class="chip${v===saveCfg.pct?" on":""}" data-n="${v}">${t}</button>`).join("")
+    : duel
+    ? D_OPTS.map(v=>`<button class="chip${v===duelCfg.L?" on":""}" data-n="${v}">${v}</button>`).join("")
+    : N_OPTS.map(v=>`<button class="chip${v===sortCfg.n?" on":""}" data-n="${v}">${v}</button>`).join("");
+  if(!sv) $("#optT").innerHTML = duel
+    ? D_OPTS.map(v=>`<button class="chip${v===duelCfg.R?" on":""}" data-t="${v}">${v}</button>`).join("")
+    : T_OPTS.map(([v,t])=>`<button class="chip${v===sortCfg.sec?" on":""}" data-t="${v}">${t}</button>`).join("");
+}
+function showSetup(kind){
+  setupKind=kind||"sort";
+  if(cleanup){ cleanup(); cleanup=null; }
+  stopClock(); stage.innerHTML="";
+  home.classList.add("hidden"); menu.classList.add("hidden");
+  play.classList.add("hidden"); done.classList.add("hidden");
+  setup.classList.remove("hidden");
+  renderSetup();
+}
+
+function startGame(id){
+  game=id; step=0; maxNum=5; sumMax=6; miss=0; shapeQueue=[];
+  qpool=buildPool(id); saveUsed=new Set();         /* 每次開始重抽題目與地形組合 */
+  /* 顆數越多，一輪就夠久了，不要再重複三輪 */
+  if(id==="sortL") GAMES.sortL.rounds = sortCfg.n<=10?3:(sortCfg.n<=30?2:1);
+  home.classList.add("hidden"); menu.classList.add("hidden");
+  setup.classList.add("hidden"); done.classList.add("hidden");
+  play.classList.remove("hidden");
+  clockCarry = id==="sortL" ? sortCfg.sec : 0;
+  renderStars(); build();
+}
+function showMenu(m){
+  mode=m;
+  if(cleanup){ cleanup(); cleanup=null; }
+  stopClock(); stage.innerHTML="";
+  home.classList.add("hidden"); play.classList.add("hidden");
+  setup.classList.add("hidden"); done.classList.add("hidden");
+  menu.classList.remove("hidden");
+  $("#menuTitle").innerHTML=`<span class="tape">${m==="bear"?"🚗 小車手":"🐲 小訓練家"}</span>`;
+  $("#menuGames").innerHTML=Object.entries(GAMES).filter(([,g])=>g.mode===m)
+    .map(([id,g])=>`<button class="gm" data-g="${id}"><span class="ic">${g.ic}</span>
+      <span class="nm">${g.nm}</span><span class="hint">${g.hint}</span></button>`).join("");
+}
+function goHome(){
+  if(cleanup){ cleanup(); cleanup=null; }
+  stopClock(); stage.innerHTML=""; cancelAnimationFrame(raf);
+  menu.classList.add("hidden"); play.classList.add("hidden");
+  setup.classList.add("hidden"); done.classList.add("hidden");
+  home.classList.remove("hidden"); renderBook();
+}
+function finish(title,sub){
+  if(cleanup){ cleanup(); cleanup=null; }
+  stopClock(); onTimeUp=null; clockEl.classList.add("hidden");
+  const book=loadBook(), unused=STICKERS.filter(s=>!book.includes(s));
+  const got = unused.length ? one(unused) : one(STICKERS);
+  if(!book.includes(got)){ book.push(got); saveBook(book); }
+  $("#doneSticker").textContent=got;
+  $("#doneTitle").textContent=title||"全部完成了！";
+  $("#doneSub").textContent=sub||"收進收集簿了";
+  done.classList.remove("hidden");
+  sfx.cheer(); say("好棒");
+  confetti(); renderBook();
+}
+
+/* ═══════════ 煙火 ═══════════ */
+const cv=$("#confetti"); let raf=null;
+function confetti(){
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const ctx=cv.getContext("2d"), dpr=Math.min(2,devicePixelRatio||1);
+  const W=cv.clientWidth,H=cv.clientHeight;
+  cv.width=W*dpr; cv.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+  const cols=["#E8556D","#FFC43D","#3FA796","#7B5EA7","#FFFFFF"];
+  const ps=Array.from({length:110},()=>({
+    x:W/2+(Math.random()-.5)*W*.5, y:H*.42+(Math.random()-.5)*40,
+    vx:(Math.random()-.5)*9, vy:-Math.random()*11-3,
+    s:5+Math.random()*7, a:Math.random()*6.28, va:(Math.random()-.5)*.3,
+    c:cols[Math.random()*cols.length|0]
+  }));
+  let t=0; cancelAnimationFrame(raf);
+  (function loop(){
+    t++; ctx.clearRect(0,0,W,H);
+    ps.forEach(p=>{
+      p.vy+=.26; p.x+=p.vx; p.y+=p.vy; p.a+=p.va;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a);
+      ctx.fillStyle=p.c; ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*.62); ctx.restore();
+    });
+    if(t<200) raf=requestAnimationFrame(loop); else ctx.clearRect(0,0,W,H);
+  })();
+}
+
+/* ═══════════ 綁定 ═══════════ */
+document.querySelectorAll(".who").forEach(b=>b.addEventListener("click",()=>{ audio(); sfx.tap(); showMenu(b.dataset.mode); }));
+$("#menuGames").addEventListener("click",e=>{
+  const b=e.target.closest(".gm"); if(!b) return;
+  sfx.tap();
+  if(b.dataset.g==="sortL") showSetup("sort");
+  else if(b.dataset.g==="duel") showSetup("duel");
+  else if(b.dataset.g==="save") showSetup("save");
+  else startGame(b.dataset.g);
+});
+$("#menuBack").addEventListener("click",goHome);
+$("#back").addEventListener("click",()=>showMenu(mode));
+$("#toMenu").addEventListener("click",()=>showMenu(mode));
+$("#again").addEventListener("click",()=>{ done.classList.add("hidden"); cancelAnimationFrame(raf); startGame(game); });
+$("#optN").addEventListener("click",e=>{ const c=e.target.closest(".chip"); if(!c) return;
+  if(setupKind==="save") saveCfg.pct=+c.dataset.n;
+  else if(setupKind==="duel") duelCfg.L=+c.dataset.n;
+  else sortCfg.n=+c.dataset.n;
+  storeCfg(); renderSetup(); sfx.tap(); });
+$("#optT").addEventListener("click",e=>{ const c=e.target.closest(".chip"); if(!c) return;
+  if(setupKind==="duel") duelCfg.R=+c.dataset.t; else sortCfg.sec=+c.dataset.t;
+  storeCfg(); renderSetup(); sfx.tap(); });
+$("#setupGo").addEventListener("click",()=>{ audio(); sfx.tap();
+  startGame(setupKind==="duel"?"duel":setupKind==="save"?"save":"sortL"); });
+$("#setupBack").addEventListener("click",()=>showMenu(mode));
+
+document.addEventListener("gesturestart",e=>e.preventDefault());
+document.addEventListener("dblclick",e=>e.preventDefault());
+
+renderBook();
+})();
+</script>
+
+<script>if("serviceWorker" in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register("sw.js").catch(()=>{});</script>
