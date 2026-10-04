@@ -1,7 +1,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>蛛絲飛簷</title>
 <!-- PWA：加到 iPad 主畫面後可全螢幕、可離線 -->
-<link rel="manifest" href="manifest.webmanifest"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="蛛絲飛簷"><link rel="apple-touch-icon" href="icon-180.png"><meta name="theme-color" content="#1b1f2a">
+<link rel="manifest" href="manifest.webmanifest"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="蛛絲飛簷"><link rel="apple-touch-icon" href="icon-180.png"><meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=DM+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;700;900&display=swap">
@@ -25,9 +25,7 @@
   }
   *{box-sizing:border-box}
   body{
-    background:
-      radial-gradient(120% 80% at 50% -10%, #2A1B4E 0%, rgba(42,27,78,0) 60%),
-      var(--ink);
+    background:#000;   /* 純黑：背景不花，小孩玩久不累 */
     color:var(--text);
     font-family:var(--display);
     min-height:100vh;
@@ -38,6 +36,8 @@
     align-items:flex-start;
     padding:28px 18px 40px;
   }
+  /* 平板／手機：邊距縮到最小，畫面盡量放大 */
+  @media (max-width:1100px){ body{padding:6px 6px 14px} .wrap{gap:8px} }
   /* 網點質地：漫畫 Ben-Day dots */
   body::before{
     content:"";
@@ -46,8 +46,9 @@
     background-size:5px 5px;
     opacity:.35;
     mix-blend-mode:screen;
+    display:none;      /* 網點質地關掉 */
   }
-  .wrap{position:relative; z-index:1; width:100%; max-width:960px; display:flex; flex-direction:column; gap:14px}
+  .wrap{position:relative; z-index:1; width:100%; max-width:1400px; display:flex; flex-direction:column; gap:14px}
 
   header{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap}
   .lockup{display:flex; flex-direction:column; gap:2px}
@@ -83,7 +84,7 @@
     box-shadow:0 0 0 1px rgba(0,0,0,.6), 0 26px 60px -24px rgba(122,46,99,.85), inset 0 0 0 1px rgba(234,244,255,.05);
     overflow:hidden;
   }
-  canvas{display:block; width:100%; aspect-ratio:3/1; touch-action:manipulation; cursor:pointer}
+  canvas{display:block; width:100%; aspect-ratio:2/1; touch-action:manipulation; cursor:pointer}
   canvas:focus-visible{outline:3px solid var(--glow); outline-offset:-3px}
 
   .bar{
@@ -194,7 +195,8 @@
 (() => {
   "use strict";
 
-  const V = { W: 900, H: 300, GROUND: 252, PX: 96 };
+  const V = { W: 900, H: 450, GROUND: 402, PX: 96 };
+  const CALM = true;   /* 安靜模式：純黑天空、不畫星月／天際線／背景煙火，障礙物改成看得清楚的深藍灰 */
   const cv = document.getElementById("cv");
   const ctx = cv.getContext("2d");
   const elSc = document.getElementById("sc");
@@ -755,7 +757,7 @@
   }
 
   function drawObstacle(o, pal) {
-    const INK = "#05070F", RIM = pal.win;
+    const INK = CALM ? "#2A3358" : "#05070F", RIM = pal.win;
     if (o.kind === "unit") {
       ctx.fillStyle = INK; ctx.fillRect(o.x, o.y, o.w, o.h);
       ctx.fillStyle = RIM; ctx.globalAlpha = 0.85;
@@ -913,12 +915,15 @@
     if (shake > 0.4) ctx.translate(rnd(-shake, shake) * 0.5, rnd(-shake, shake) * 0.5);
 
     // 天空
-    const gr = ctx.createLinearGradient(0, 0, 0, V.GROUND);
-    gr.addColorStop(0, pal.top); gr.addColorStop(0.55, pal.mid); gr.addColorStop(1, pal.bot);
-    ctx.fillStyle = gr; ctx.fillRect(-20, -20, V.W + 40, V.GROUND + 20);
+    if (CALM) { ctx.fillStyle = "#000"; ctx.fillRect(-20, -20, V.W + 40, V.GROUND + 20); }
+    else {
+      const gr = ctx.createLinearGradient(0, 0, 0, V.GROUND);
+      gr.addColorStop(0, pal.top); gr.addColorStop(0.55, pal.mid); gr.addColorStop(1, pal.bot);
+      ctx.fillStyle = gr; ctx.fillRect(-20, -20, V.W + 40, V.GROUND + 20);
+    }
 
     // 星星
-    if (pal.star > 0.05) {
+    if (!CALM && pal.star > 0.05) {
       ctx.fillStyle = "#EAF4FF";
       for (const s of stars) {
         ctx.globalAlpha = pal.star * (0.35 + 0.65 * Math.abs(Math.sin(frames * 0.02 + s.p)));
@@ -927,7 +932,7 @@
       ctx.globalAlpha = 1;
     }
     // 月：只在夠暗的時候升起，否則會在黃昏天空上變成一塊灰斑
-    if (pal.star > 0.4) {
+    if (!CALM && pal.star > 0.4) {
       // 兩個圓用 evenodd 相減直接畫出弦月，不必拿天空色去蓋
       ctx.globalAlpha = (pal.star - 0.4) / 0.6;
       ctx.fillStyle = "#F3EEDC";
@@ -939,17 +944,18 @@
     }
 
     // 城裡放的煙火：畫在天際線後面
-    drawShells(false);
-    drawParts(skyParts);
+    if (!CALM) { drawShells(false); drawParts(skyParts); }
 
     // 地平線輝光
     const hg = ctx.createLinearGradient(0, V.GROUND - 120, 0, V.GROUND);
     hg.addColorStop(0, "rgba(232,115,74,0)"); hg.addColorStop(1, "rgba(232,115,74,0.22)");
-    ctx.fillStyle = hg; ctx.fillRect(0, V.GROUND - 120, V.W, 120);
+    if (!CALM) { ctx.fillStyle = hg; ctx.fillRect(0, V.GROUND - 120, V.W, 120); }
 
     // 遠、中景天際線
-    for (const b of far) roof(b, V.GROUND, pal.far, pal.win, 0.12, pal);
-    for (const b of mid) roof(b, V.GROUND, pal.near, pal.win, 0.3, pal);
+    if (!CALM) {
+      for (const b of far) roof(b, V.GROUND, pal.far, pal.win, 0.12, pal);
+      for (const b of mid) roof(b, V.GROUND, pal.near, pal.win, 0.3, pal);
+    }
 
     // 街面
     ctx.fillStyle = "#05070F"; ctx.fillRect(0, V.GROUND, V.W, V.H - V.GROUND);
@@ -1117,7 +1123,5 @@
 })();
 </script>
 
-<script>if("serviceWorker" in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register("sw.js").catch(()=>{});</script>
-
-<script>/* 新版服務工作者接管後自動重新載入一次，不用手動清快取 */
+<script>if("serviceWorker" in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register("sw.js").catch(()=>{});
 if("serviceWorker" in navigator){ let r=false; navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(r) return; r=true; location.reload(); }); }</script>
