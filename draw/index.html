@@ -58,7 +58,7 @@ button{font-family:inherit}
 #bar .nm{flex:1;text-align:center;font-weight:900;font-size:clamp(15px,2.6vmin,20px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #stage{flex:1;position:relative;min-height:0;display:grid;place-items:center;padding:6px;touch-action:none}
 #stage canvas{position:absolute;border-radius:16px;box-shadow:var(--shadow);background:#fff}
-#draw{touch-action:none;cursor:crosshair;background:transparent}   /* 上層畫布要透明，不然會把底圖蓋住 */
+#stage #draw{touch-action:none;cursor:crosshair;background:transparent;box-shadow:none}   /* 上層畫布要透明，不然會把底圖蓋住（選擇器要贏過 #stage canvas） */
 #tools{flex:none;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;
   padding:8px 10px calc(10px + env(safe-area-inset-bottom));background:var(--paper);box-shadow:0 -6px 20px rgba(44,58,56,.08)}
 .sw{width:clamp(32px,5.6vmin,46px);height:clamp(32px,5.6vmin,46px);border-radius:50%;border:4px solid #fff;box-shadow:0 0 0 2px var(--line);cursor:pointer}
