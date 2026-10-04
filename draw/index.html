@@ -58,7 +58,9 @@ button{font-family:inherit}
 #bar .nm{flex:1;text-align:center;font-weight:900;font-size:clamp(15px,2.6vmin,20px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #stage{flex:1;position:relative;min-height:0;display:grid;place-items:center;padding:6px;touch-action:none}
 #stage canvas{position:absolute;border-radius:16px;box-shadow:var(--shadow);background:#fff}
-#stage #draw{touch-action:none;cursor:crosshair;background:transparent;box-shadow:none}   /* 上層畫布要透明，不然會把底圖蓋住（選擇器要贏過 #stage canvas） */
+/* 上層兩層畫布透明，而且用「色彩相乘」疊在底圖上：顏色只染白色的地方，黑色線條永遠蓋不掉——跟真的螢光筆、蠟筆一樣 */
+#stage #draw,#stage #tmp{touch-action:none;cursor:crosshair;background:transparent;box-shadow:none;mix-blend-mode:multiply}
+#stage #tmp{pointer-events:none}
 #tools{flex:none;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;
   padding:8px 10px calc(10px + env(safe-area-inset-bottom));background:var(--paper);box-shadow:0 -6px 20px rgba(44,58,56,.08)}
 .sw{width:clamp(32px,5.6vmin,46px);height:clamp(32px,5.6vmin,46px);border-radius:50%;border:4px solid #fff;box-shadow:0 0 0 2px var(--line);cursor:pointer}
@@ -92,8 +94,12 @@ button{font-family:inherit}
     <button class="btn" id="save">存檔</button>
     <button class="btn berry" id="share">分享</button>
   </div>
-  <div id="stage"><canvas id="base"></canvas><canvas id="draw"></canvas></div>
+  <div id="stage"><canvas id="base"></canvas><canvas id="draw"></canvas><canvas id="tmp"></canvas></div>
   <div id="tools">
+    <button class="tool brush on" data-b="crayon">🖍️ 蠟筆</button>
+    <button class="tool brush" data-b="hilite">🟨 螢光筆</button>
+    <button class="tool brush" data-b="marker">🖌️ 麥克筆</button>
+    <span class="sep"></span>
     <span id="colors"></span>
     <span class="sep"></span>
     <button class="sz" data-s="10"><i style="width:8px;height:8px"></i></button>
@@ -111,7 +117,20 @@ button{font-family:inherit}
 "use strict";
 const $=s=>document.querySelector(s);
 const COLORS=["#2C3A38","#E8556D","#FF8A3D","#FFC43D","#7CB342","#3FA796","#5C9BD1","#7B5EA7","#F2B35C","#8E6E53","#F7A8C4","#FFFFFF"];
-let color=COLORS[1], size=22, eraser=false, cur=null, undoStack=[], pid=null;
+let color=COLORS[1], size=22, eraser=false, cur=null, undoStack=[], pid=null, brush="crayon";
+/* 三種筆：蠟筆有顆粒、螢光筆寬扁半透明、麥克筆實心。都用相乘疊色，所以都蓋不掉黑線 */
+const BRUSH={ crayon:{alpha:.92, w:1.0, cap:"round", grain:true}, hilite:{alpha:.55, w:2.2, cap:"butt", grain:false}, marker:{alpha:1, w:1.0, cap:"round", grain:false} };
+/* 蠟筆的顆粒：用這個顏色做一塊帶雜點的小圖當筆刷圖樣 */
+const patCache={};
+function crayonPattern(ctx,col){
+  if(patCache[col]) return patCache[col];
+  const c=document.createElement("canvas"); c.width=c.height=48; const x=c.getContext("2d");
+  x.fillStyle=col; x.globalAlpha=.78; x.fillRect(0,0,48,48);
+  const img=x.getImageData(0,0,48,48), d=img.data;
+  for(let i=3;i<d.length;i+=4){ d[i]=Math.max(0,Math.min(255,d[i]*(0.35+Math.random()*0.9))); }   /* 透明度隨機 → 蠟筆的粗糙感 */
+  x.putImageData(img,0,0);
+  return patCache[col]=ctx.createPattern(c,"repeat");
+}
 
 /* ===== 本機資料庫：pics { id, name, img(Blob), ink(Blob|null), t } ===== */
 function db(){ return new Promise((ok,no)=>{ const r=indexedDB.open("huahua",1);
@@ -161,14 +180,14 @@ $("#blankBtn").onclick=async()=>{
 
 /* ===== 編輯 ===== */
 let pic=null, W=0, H=0;
-const base=$("#base"), draw=$("#draw"), bx=base.getContext("2d"), dx=draw.getContext("2d");
+const base=$("#base"), draw=$("#draw"), tmp=$("#tmp"), bx=base.getContext("2d"), dx=draw.getContext("2d"), px=tmp.getContext("2d");
 async function openPic(id){
   pic=await getPic(id); if(!pic) return;
   undoStack=[]; eraser=false; $("#eraser").classList.remove("on");
   $("#title").textContent=pic.name;
   $("#home").classList.add("hidden"); $("#edit").classList.remove("hidden");
   const img=await createImageBitmap(pic.img); W=img.width; H=img.height;
-  base.width=W; base.height=H; draw.width=W; draw.height=H;
+  base.width=W; base.height=H; draw.width=W; draw.height=H; tmp.width=W; tmp.height=H;
   bx.drawImage(img,0,0); dx.clearRect(0,0,W,H);
   if(pic.ink){ const ink=await createImageBitmap(pic.ink); dx.drawImage(ink,0,0); }   /* 上次畫的 */
   fit();
@@ -177,31 +196,48 @@ async function openPic(id){
 function fit(){
   const st=$("#stage"), sw=st.clientWidth-12, sh=st.clientHeight-12;
   const k=Math.min(sw/W, sh/H), w=Math.round(W*k), h=Math.round(H*k);
-  [base,draw].forEach(c=>{ c.style.width=w+"px"; c.style.height=h+"px"; });
+  [base,draw,tmp].forEach(c=>{ c.style.width=w+"px"; c.style.height=h+"px"; });
 }
 addEventListener("resize",()=>{ if(pic) fit(); });
 function pos(e){ const r=draw.getBoundingClientRect(); return [(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height]; }
 function snap(){ undoStack.push(dx.getImageData(0,0,W,H)); if(undoStack.length>25) undoStack.shift(); }
+/* 一筆的流程：橡皮擦直接擦畫層；其他筆先畫在預覽層（tmp，用 CSS 透明度顯示半透明），
+   放手時才用該筆的透明度合進畫層——這樣同一筆自己重疊的地方不會變深，螢光筆才像螢光筆 */
+let ctxNow=null;
 draw.addEventListener("pointerdown",e=>{
   if(pid!==null) return; pid=e.pointerId; snap();
   const [x,y]=pos(e); cur=[x,y];
-  dx.lineCap="round"; dx.lineJoin="round"; dx.lineWidth=size*(W/1000);
-  dx.globalCompositeOperation=eraser?"destination-out":"source-over"; dx.strokeStyle=color;
-  dx.beginPath(); dx.moveTo(x,y); dx.lineTo(x+.1,y); dx.stroke();
+  const B=BRUSH[brush], lw=size*B.w*(W/1000);
+  if(eraser){
+    ctxNow=dx; dx.globalCompositeOperation="destination-out"; dx.strokeStyle="#000"; dx.lineCap="round"; dx.lineJoin="round"; dx.lineWidth=lw; dx.globalAlpha=1;
+  }else{
+    ctxNow=px; px.clearRect(0,0,W,H); px.globalCompositeOperation="source-over"; px.globalAlpha=1;
+    px.lineCap=B.cap; px.lineJoin="round"; px.lineWidth=lw;
+    px.strokeStyle=B.grain?crayonPattern(px,color):color;
+    tmp.style.opacity=B.alpha;
+  }
+  ctxNow.beginPath(); ctxNow.moveTo(x,y); ctxNow.lineTo(x+.1,y); ctxNow.stroke();
   try{ draw.setPointerCapture(e.pointerId); }catch(err){}
 });
 draw.addEventListener("pointermove",e=>{
-  if(e.pointerId!==pid||!cur) return;
-  const [x,y]=pos(e); dx.beginPath(); dx.moveTo(cur[0],cur[1]); dx.lineTo(x,y); dx.stroke(); cur=[x,y];
+  if(e.pointerId!==pid||!cur||!ctxNow) return;
+  const [x,y]=pos(e); ctxNow.beginPath(); ctxNow.moveTo(cur[0],cur[1]); ctxNow.lineTo(x,y); ctxNow.stroke(); cur=[x,y];
 });
-const up=e=>{ if(e.pointerId===pid){ pid=null; cur=null; } };
+const up=e=>{
+  if(e.pointerId!==pid) return;
+  if(!eraser){ dx.globalCompositeOperation="source-over"; dx.globalAlpha=BRUSH[brush].alpha; dx.drawImage(tmp,0,0); dx.globalAlpha=1; px.clearRect(0,0,W,H); tmp.style.opacity=1; }
+  pid=null; cur=null; ctxNow=null;
+};
 draw.addEventListener("pointerup",up); draw.addEventListener("pointercancel",up);
 
 /* 工具列 */
 $("#colors").innerHTML=COLORS.map(c=>`<button class="sw${c===color?" on":""}" style="background:${c}" data-c="${c}" aria-label="顏色"></button>`).join("");
 $("#colors").addEventListener("click",e=>{ const b=e.target.closest(".sw"); if(!b) return; color=b.dataset.c; eraser=false; $("#eraser").classList.remove("on");
   document.querySelectorAll(".sw").forEach(x=>x.classList.toggle("on",x===b)); });
-$("#tools").addEventListener("click",e=>{ const b=e.target.closest(".sz"); if(!b) return; size=+b.dataset.s; document.querySelectorAll(".sz").forEach(x=>x.classList.toggle("on",x===b)); });
+$("#tools").addEventListener("click",e=>{
+  const b=e.target.closest(".sz"); if(b){ size=+b.dataset.s; document.querySelectorAll(".sz").forEach(x=>x.classList.toggle("on",x===b)); return; }
+  const br=e.target.closest(".brush"); if(br){ brush=br.dataset.b; eraser=false; $("#eraser").classList.remove("on"); document.querySelectorAll(".brush").forEach(x=>x.classList.toggle("on",x===br)); }
+});
 $("#eraser").onclick=()=>{ eraser=!eraser; $("#eraser").classList.toggle("on",eraser); };
 $("#clear").onclick=()=>{ if(confirm("把畫的全部清掉？")){ snap(); dx.clearRect(0,0,W,H); } };
 $("#undo").onclick=()=>{ const s=undoStack.pop(); if(s) dx.putImageData(s,0,0); };
@@ -210,7 +246,7 @@ async function savePic(quiet){
   const ink=await new Promise(r=>draw.toBlob(r,"image/png")); pic.ink=ink;
   /* 圖庫縮圖：底圖＋畫的合成一張小圖 */
   const k=Math.min(1,420/Math.max(W,H)), c=document.createElement("canvas"); c.width=Math.round(W*k); c.height=Math.round(H*k);
-  const x=c.getContext("2d"); x.drawImage(base,0,0,c.width,c.height); x.drawImage(draw,0,0,c.width,c.height);
+  const x=c.getContext("2d"); x.drawImage(base,0,0,c.width,c.height); x.globalCompositeOperation="multiply"; x.drawImage(draw,0,0,c.width,c.height);
   pic.thumb=await new Promise(r=>c.toBlob(r,"image/png"));
   await putPic(pic); if(!quiet) toast("存好了");
 }
@@ -218,7 +254,7 @@ $("#save").onclick=()=>savePic(false);
 /* 分享／存到照片：把底圖和畫的合成一張 PNG */
 $("#share").onclick=async()=>{
   const c=document.createElement("canvas"); c.width=W; c.height=H; const x=c.getContext("2d");
-  x.drawImage(base,0,0); x.drawImage(draw,0,0);
+  x.drawImage(base,0,0); x.globalCompositeOperation="multiply"; x.drawImage(draw,0,0);
   const blob=await new Promise(r=>c.toBlob(r,"image/png")); const file=new File([blob],pic.name+".png",{type:"image/png"});
   if(navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:pic.name}); }catch(e){} }
   else { const u=URL.createObjectURL(blob); window.open(u,"_blank"); toast("長按圖片可以存到照片"); }
