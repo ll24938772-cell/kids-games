@@ -52,6 +52,8 @@ h1{margin:0;font-size:clamp(28px,5.6vmin,50px)}
 .game[data-k="math"] .name{color:var(--leaf)}
 .game[data-k="spider"] .name{color:var(--night)}
 .game[data-k="zhuyin"] .name{color:var(--grape)}
+.game[data-k="draw"] .name{color:var(--berry)}
+.game:nth-child(4){transform:rotate(1.4deg)}
 .tag{margin-top:.4em;font-size:clamp(11px,1.8vmin,13px);font-weight:700;letter-spacing:.08em;
   padding:.25em .8em;border-radius:999px;background:var(--ground);color:var(--ink-soft)}
 footer{font-size:clamp(12px,1.9vmin,14px);color:var(--ink-soft);font-weight:500;text-align:center}
@@ -74,6 +76,12 @@ footer{font-size:clamp(12px,1.9vmin,14px);color:var(--ink-soft);font-weight:500;
       <span class="who">射絲跑酷・比高分</span>
       <span class="tag">反應</span>
     </a>
+    <a class="game" data-k="draw" href="draw/">
+      <span class="face">🖍️</span>
+      <span class="name">畫畫本</span>
+      <span class="who">加入自己的圖・手指畫畫上色</span>
+      <span class="tag">離線</span>
+    </a>
     <a class="game" data-k="zhuyin" href="https://ll24938772-cell.github.io/zhuyin-mole/">
       <span class="face zy">ㄅㄆ</span>
       <span class="name">注音打地鼠</span>
@@ -81,7 +89,7 @@ footer{font-size:clamp(12px,1.9vmin,14px);color:var(--ink-soft);font-weight:500;
       <span class="tag">注音</span>
     </a>
   </div>
-  <footer>Safari「分享」→「加入主畫面」，前兩個遊戲沒網路也能玩<br><span id="off">✅ 已存在這台裝置裡，離線可玩</span></footer>
+  <footer>Safari「分享」→「加入主畫面」，數學、蜘蛛、畫畫本沒網路也能玩<br><span id="off">✅ 已存在這台裝置裡，離線可玩</span></footer>
 </main>
 <script>
 /* 入口頁的服務工作者會把數學遊戲和蛛絲飛簷一起存進裝置，所以只要加入一次主畫面就夠 */

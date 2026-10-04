@@ -1,0 +1,226 @@
+<!doctype html><html lang="zh-TW"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>畫畫本</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="畫畫本">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="theme-color" content="#E8556D">
+<style>
+/* 幼兒剪貼簿風格，跟樂園一致。圖片只存在這台裝置的瀏覽器資料庫裡（IndexedDB），不會上傳 */
+:root{
+  --ground:#E7F1EE;--ground-dot:#CFE3DE;--paper:#fff;--ink:#2C3A38;--ink-soft:#6A7B78;
+  --berry:#E8556D;--sun:#FFC43D;--leaf:#3FA796;--grape:#7B5EA7;--line:#CADDD8;
+  --shadow:0 6px 0 rgba(44,58,56,.10),0 14px 28px rgba(44,58,56,.10);
+  --blob:20px 26px 18px 24px / 24px 18px 26px 20px;
+  --zh:"Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:var(--zh);color:var(--ink);
+  background:radial-gradient(circle at 1px 1px,var(--ground-dot) 1.6px,transparent 1.7px) 0 0/26px 26px,var(--ground);
+  -webkit-tap-highlight-color:transparent;overscroll-behavior:none;touch-action:manipulation}
+.hidden{display:none!important}
+button{font-family:inherit}
+.tape{display:inline-block;padding:.3em 1em;background:var(--sun);transform:rotate(-1.6deg);
+  box-shadow:0 3px 0 rgba(44,58,56,.12);font-weight:900;letter-spacing:.06em}
+.btn{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:.4em;padding:.55em 1.3em;background:var(--leaf);color:#fff;
+  font-weight:900;font-size:clamp(15px,2.6vmin,21px);border-radius:999px;box-shadow:0 5px 0 #2F8476;white-space:nowrap}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 #2F8476}
+.btn.ghost{background:var(--paper);color:var(--ink);box-shadow:inset 0 0 0 3px var(--line)}
+.btn.ghost:active{transform:translateY(2px);box-shadow:inset 0 0 0 3px var(--line)}
+.btn.berry{background:var(--berry);box-shadow:0 5px 0 #B23B50}
+.btn.berry:active{box-shadow:0 2px 0 #B23B50}
+.btn:focus-visible{outline:4px solid var(--grape);outline-offset:3px}
+
+/* 首頁：圖庫 */
+#home{min-height:100svh;display:flex;flex-direction:column;align-items:center;gap:clamp(14px,2.8vmin,28px);
+  padding:clamp(16px,3.4vmin,36px) 16px calc(24px + env(safe-area-inset-bottom))}
+#home h1{margin:0;font-size:clamp(26px,5.2vmin,46px)}
+.actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(clamp(130px,22vmin,200px),1fr));gap:clamp(12px,2.4vmin,22px);width:100%;max-width:1100px}
+.card{all:unset;cursor:pointer;position:relative;display:flex;flex-direction:column;background:var(--paper);border-radius:var(--blob);
+  box-shadow:var(--shadow);overflow:hidden;aspect-ratio:1;transition:transform .15s ease}
+.card:active{transform:scale(.96)}
+.card img{width:100%;height:100%;object-fit:contain;background:#fff;padding:6%}
+.card .nm{position:absolute;left:0;right:0;bottom:0;padding:.35em .6em;background:rgba(255,255,255,.88);font-weight:900;
+  font-size:clamp(12px,2vmin,15px);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card.blank{align-items:center;justify-content:center;font-size:clamp(40px,8vmin,72px);color:var(--line)}
+.card .del{position:absolute;top:6px;right:6px;width:30px;height:30px;border-radius:50%;border:0;background:rgba(255,255,255,.9);
+  color:var(--berry);font-weight:900;font-size:16px;cursor:pointer;box-shadow:0 2px 0 rgba(44,58,56,.15)}
+.note{color:var(--ink-soft);font-weight:500;font-size:clamp(12px,2vmin,15px);text-align:center;max-width:46em;line-height:1.5}
+
+/* 編輯頁 */
+#edit{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--ground)}
+#bar{flex:none;display:flex;align-items:center;gap:10px;padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top))}
+#bar .nm{flex:1;text-align:center;font-weight:900;font-size:clamp(15px,2.6vmin,20px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#stage{flex:1;position:relative;min-height:0;display:grid;place-items:center;padding:6px;touch-action:none}
+#stage canvas{position:absolute;border-radius:16px;box-shadow:var(--shadow);background:#fff}
+#draw{touch-action:none;cursor:crosshair}
+#tools{flex:none;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;
+  padding:8px 10px calc(10px + env(safe-area-inset-bottom));background:var(--paper);box-shadow:0 -6px 20px rgba(44,58,56,.08)}
+.sw{width:clamp(32px,5.6vmin,46px);height:clamp(32px,5.6vmin,46px);border-radius:50%;border:4px solid #fff;box-shadow:0 0 0 2px var(--line);cursor:pointer}
+.sw.on{box-shadow:0 0 0 4px var(--grape)}
+.sz{width:clamp(36px,6vmin,48px);height:clamp(36px,6vmin,48px);border-radius:50%;border:0;background:var(--ground);display:grid;place-items:center;cursor:pointer}
+.sz i{display:block;border-radius:50%;background:var(--ink)}
+.sz.on{background:var(--sun)}
+.sep{width:2px;height:28px;background:var(--line);margin:0 4px}
+.tool{all:unset;cursor:pointer;padding:.4em .8em;border-radius:999px;background:var(--ground);font-weight:900;font-size:clamp(13px,2.2vmin,17px)}
+.tool.on{background:var(--sun)}
+#toast{position:fixed;left:50%;top:14%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:.5em 1.2em;border-radius:999px;
+  font-weight:900;z-index:9;opacity:0;transition:opacity .25s;pointer-events:none}
+#toast.on{opacity:.94}
+</style></head>
+<body>
+<section id="home">
+  <h1><span class="tape">畫畫本</span></h1>
+  <div class="actions">
+    <label class="btn berry">＋ 加入圖片<input id="pick" type="file" accept="image/*" multiple hidden></label>
+    <button class="btn" id="blankBtn">＋ 白紙</button>
+  </div>
+  <div class="grid" id="grid"></div>
+  <p class="note">圖片只存在這台裝置裡，不會上傳。從網站下載的連連看、自己拍的照片都可以加進來，沒網路也能畫。</p>
+</section>
+
+<section id="edit" class="hidden">
+  <div id="bar">
+    <button class="btn ghost" id="back">◀ 回圖庫</button>
+    <div class="nm" id="title"></div>
+    <button class="btn ghost" id="undo">上一步</button>
+    <button class="btn" id="save">存檔</button>
+    <button class="btn berry" id="share">分享</button>
+  </div>
+  <div id="stage"><canvas id="base"></canvas><canvas id="draw"></canvas></div>
+  <div id="tools">
+    <span id="colors"></span>
+    <span class="sep"></span>
+    <button class="sz" data-s="10"><i style="width:8px;height:8px"></i></button>
+    <button class="sz on" data-s="22"><i style="width:14px;height:14px"></i></button>
+    <button class="sz" data-s="44"><i style="width:22px;height:22px"></i></button>
+    <span class="sep"></span>
+    <button class="tool" id="eraser">橡皮擦</button>
+    <button class="tool" id="clear">清除</button>
+  </div>
+</section>
+<div id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const COLORS=["#2C3A38","#E8556D","#FF8A3D","#FFC43D","#7CB342","#3FA796","#5C9BD1","#7B5EA7","#F2B35C","#8E6E53","#F7A8C4","#FFFFFF"];
+let color=COLORS[1], size=22, eraser=false, cur=null, undoStack=[], pid=null;
+
+/* ===== 本機資料庫：pics { id, name, img(Blob), ink(Blob|null), t } ===== */
+function db(){ return new Promise((ok,no)=>{ const r=indexedDB.open("huahua",1);
+  r.onupgradeneeded=()=>{ r.result.createObjectStore("pics",{keyPath:"id"}); };
+  r.onsuccess=()=>ok(r.result); r.onerror=()=>no(r.error); }); }
+async function tx(mode,fn){ const d=await db(); return new Promise((ok,no)=>{ const t=d.transaction("pics",mode), s=t.objectStore("pics"); const req=fn(s); t.oncomplete=()=>ok(req&&req.result); t.onerror=()=>no(t.error); }); }
+const allPics=()=>tx("readonly",s=>s.getAll());
+const putPic=p=>tx("readwrite",s=>s.put(p));
+const delPic=id=>tx("readwrite",s=>s.delete(id));
+const getPic=id=>tx("readonly",s=>s.get(id));
+
+function toast(m){ const t=$("#toast"); t.textContent=m; t.classList.add("on"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("on"),1600); }
+
+/* ===== 圖庫 ===== */
+async function renderGrid(){
+  const pics=(await allPics()).sort((a,b)=>b.t-a.t);
+  const g=$("#grid"); g.innerHTML="";
+  pics.forEach(p=>{
+    const c=document.createElement("button"); c.className="card";
+    const url=URL.createObjectURL(p.ink||p.img);
+    c.innerHTML=`<img src="${url}" alt=""><span class="nm">${p.name}</span><button class="del" aria-label="刪除">✕</button>`;
+    c.querySelector(".del").onclick=async e=>{ e.stopPropagation(); if(confirm("刪掉「"+p.name+"」？")){ await delPic(p.id); renderGrid(); } };
+    c.onclick=()=>openPic(p.id);
+    g.appendChild(c);
+  });
+  if(!pics.length){ const e=document.createElement("div"); e.className="note"; e.textContent="還沒有圖。按「加入圖片」選一張，或按「白紙」直接畫。"; g.appendChild(e); }
+}
+/* 加入圖片：縮到最長邊 1600px 存，省空間也畫得順 */
+async function addFiles(files){
+  for(const f of files){
+    const bmp=await createImageBitmap(f).catch(()=>null); if(!bmp) continue;
+    const k=Math.min(1,1600/Math.max(bmp.width,bmp.height));
+    const c=document.createElement("canvas"); c.width=Math.round(bmp.width*k); c.height=Math.round(bmp.height*k);
+    c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);
+    const blob=await new Promise(r=>c.toBlob(r,"image/png"));
+    await putPic({id:"p"+Date.now()+Math.random().toString(36).slice(2,6), name:f.name.replace(/\.[^.]+$/,"")||"圖片", img:blob, ink:null, t:Date.now()});
+  }
+  renderGrid(); toast("加進來了");
+}
+$("#pick").addEventListener("change",e=>{ addFiles([...e.target.files]); e.target.value=""; });
+$("#blankBtn").onclick=async()=>{
+  const c=document.createElement("canvas"); c.width=1200; c.height=900;
+  const x=c.getContext("2d"); x.fillStyle="#fff"; x.fillRect(0,0,1200,900);
+  const blob=await new Promise(r=>c.toBlob(r,"image/png"));
+  const id="p"+Date.now(); await putPic({id,name:"白紙",img:blob,ink:null,t:Date.now()}); openPic(id);
+};
+
+/* ===== 編輯 ===== */
+let pic=null, W=0, H=0;
+const base=$("#base"), draw=$("#draw"), bx=base.getContext("2d"), dx=draw.getContext("2d");
+async function openPic(id){
+  pic=await getPic(id); if(!pic) return;
+  undoStack=[]; eraser=false; $("#eraser").classList.remove("on");
+  $("#title").textContent=pic.name;
+  $("#home").classList.add("hidden"); $("#edit").classList.remove("hidden");
+  const img=await createImageBitmap(pic.img); W=img.width; H=img.height;
+  base.width=W; base.height=H; draw.width=W; draw.height=H;
+  bx.drawImage(img,0,0); dx.clearRect(0,0,W,H);
+  if(pic.ink){ const ink=await createImageBitmap(pic.ink); dx.drawImage(ink,0,0); }   /* 上次畫的 */
+  fit();
+}
+/* 畫布依舞台大小等比縮放（兩層 canvas 疊在一起） */
+function fit(){
+  const st=$("#stage"), sw=st.clientWidth-12, sh=st.clientHeight-12;
+  const k=Math.min(sw/W, sh/H), w=Math.round(W*k), h=Math.round(H*k);
+  [base,draw].forEach(c=>{ c.style.width=w+"px"; c.style.height=h+"px"; });
+}
+addEventListener("resize",()=>{ if(pic) fit(); });
+function pos(e){ const r=draw.getBoundingClientRect(); return [(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height]; }
+function snap(){ undoStack.push(dx.getImageData(0,0,W,H)); if(undoStack.length>25) undoStack.shift(); }
+draw.addEventListener("pointerdown",e=>{
+  if(pid!==null) return; pid=e.pointerId; snap();
+  const [x,y]=pos(e); cur=[x,y];
+  dx.lineCap="round"; dx.lineJoin="round"; dx.lineWidth=size*(W/1000);
+  dx.globalCompositeOperation=eraser?"destination-out":"source-over"; dx.strokeStyle=color;
+  dx.beginPath(); dx.moveTo(x,y); dx.lineTo(x+.1,y); dx.stroke();
+  try{ draw.setPointerCapture(e.pointerId); }catch(err){}
+});
+draw.addEventListener("pointermove",e=>{
+  if(e.pointerId!==pid||!cur) return;
+  const [x,y]=pos(e); dx.beginPath(); dx.moveTo(cur[0],cur[1]); dx.lineTo(x,y); dx.stroke(); cur=[x,y];
+});
+const up=e=>{ if(e.pointerId===pid){ pid=null; cur=null; } };
+draw.addEventListener("pointerup",up); draw.addEventListener("pointercancel",up);
+
+/* 工具列 */
+$("#colors").innerHTML=COLORS.map(c=>`<button class="sw${c===color?" on":""}" style="background:${c}" data-c="${c}" aria-label="顏色"></button>`).join("");
+$("#colors").addEventListener("click",e=>{ const b=e.target.closest(".sw"); if(!b) return; color=b.dataset.c; eraser=false; $("#eraser").classList.remove("on");
+  document.querySelectorAll(".sw").forEach(x=>x.classList.toggle("on",x===b)); });
+$("#tools").addEventListener("click",e=>{ const b=e.target.closest(".sz"); if(!b) return; size=+b.dataset.s; document.querySelectorAll(".sz").forEach(x=>x.classList.toggle("on",x===b)); });
+$("#eraser").onclick=()=>{ eraser=!eraser; $("#eraser").classList.toggle("on",eraser); };
+$("#clear").onclick=()=>{ if(confirm("把畫的全部清掉？")){ snap(); dx.clearRect(0,0,W,H); } };
+$("#undo").onclick=()=>{ const s=undoStack.pop(); if(s) dx.putImageData(s,0,0); };
+$("#back").onclick=async()=>{ await savePic(true); $("#edit").classList.add("hidden"); $("#home").classList.remove("hidden"); renderGrid(); };
+async function savePic(quiet){
+  const ink=await new Promise(r=>draw.toBlob(r,"image/png")); pic.ink=ink; await putPic(pic); if(!quiet) toast("存好了");
+}
+$("#save").onclick=()=>savePic(false);
+/* 分享／存到照片：把底圖和畫的合成一張 PNG */
+$("#share").onclick=async()=>{
+  const c=document.createElement("canvas"); c.width=W; c.height=H; const x=c.getContext("2d");
+  x.drawImage(base,0,0); x.drawImage(draw,0,0);
+  const blob=await new Promise(r=>c.toBlob(r,"image/png")); const file=new File([blob],pic.name+".png",{type:"image/png"});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:pic.name}); }catch(e){} }
+  else { const u=URL.createObjectURL(blob); window.open(u,"_blank"); toast("長按圖片可以存到照片"); }
+};
+
+if("serviceWorker" in navigator && /^https?:/.test(location.protocol)) navigator.serviceWorker.register("sw.js").catch(()=>{});
+renderGrid();
+})();
+</script>
+</body></html>
