@@ -1118,3 +1118,6 @@
 </script>
 
 <script>if("serviceWorker" in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register("sw.js").catch(()=>{});</script>
+
+<script>/* 新版服務工作者接管後自動重新載入一次，不用手動清快取 */
+if("serviceWorker" in navigator){ let r=false; navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(r) return; r=true; location.reload(); }); }</script>
