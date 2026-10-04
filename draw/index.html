@@ -96,6 +96,9 @@ button{font-family:inherit}
   <div class="actions">
     <label class="btn berry">＋ 加入圖片<input id="pick" type="file" accept="image/*" multiple hidden></label>
     <button class="btn" id="blankBtn">＋ 白紙</button>
+    <button class="btn ghost" id="importUrl">從網址匯入</button>
+    <label class="btn ghost">匯入檔案<input id="importFile" type="file" accept=".json,application/json" hidden></label>
+    <button class="btn ghost" id="exportBtn">匯出備份</button>
   </div>
   <div class="folders" id="folders"></div>
   <div class="grid" id="grid"></div>
@@ -325,6 +328,50 @@ $("#share").onclick=async()=>{
   const blob=await new Promise(r=>c.toBlob(r,"image/png")); const file=new File([blob],pic.name+".png",{type:"image/png"});
   if(navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:pic.name}); }catch(e){} }
   else { const u=URL.createObjectURL(blob); window.open(u,"_blank"); toast("長按圖片可以存到照片"); }
+};
+
+/* ===== 匯入／匯出：整個圖庫（圖、畫過的、資料夾）打包成一個 JSON，換裝置或備份用 ===== */
+const blobToB64=b=>new Promise(r=>{ const fr=new FileReader(); fr.onload=()=>r(String(fr.result).split(",")[1]); fr.readAsDataURL(b); });
+function b64ToBlob(b64,mime){ const bin=atob(b64), u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return new Blob([u],{type:mime||"image/png"}); }
+/* 匯入的圖一樣縮到最長邊 1600px，跟「加入圖片」相同 */
+async function shrink(blob){
+  const bmp=await createImageBitmap(blob).catch(()=>null); if(!bmp) return blob;
+  const k=Math.min(1,1600/Math.max(bmp.width,bmp.height)); if(k===1&&blob.type==="image/png") return blob;
+  const c=document.createElement("canvas"); c.width=Math.round(bmp.width*k); c.height=Math.round(bmp.height*k);
+  c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);
+  return new Promise(r=>c.toBlob(r,"image/png"));
+}
+async function importPack(obj){
+  if(!obj||!Array.isArray(obj.pics)) throw new Error("這不是畫畫本的匯入檔");
+  const have=new Set((await allPics()).map(p=>p.id)), haveF=new Set((await allFolders()).map(f=>f.id));
+  let nf=0,np=0,i=0;
+  for(const f of obj.folders||[]) if(f&&f.id&&!haveF.has(f.id)){ await putFolder({id:f.id,name:String(f.name||"資料夾"),t:f.t||Date.now()}); nf++; }
+  for(const p of obj.pics){
+    i++; toast(`匯入中… ${i}/${obj.pics.length}`);
+    if(!p||!p.id||!p.data||have.has(p.id)) continue;
+    const img=await shrink(b64ToBlob(p.data,p.mime));
+    await putPic({id:p.id,name:String(p.name||"圖片"),folder:p.folder||"",t:p.t||Date.now(),img,ink:p.ink?b64ToBlob(p.ink,"image/png"):null});
+    np++;
+  }
+  await renderFolders(); renderGrid(); toast(`完成：匯入 ${np} 張圖、${nf} 個資料夾`+(obj.pics.length-np?`（${obj.pics.length-np} 張已經有了，跳過）`:""));
+}
+$("#importFile").addEventListener("change",async e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  try{ await importPack(JSON.parse(await f.text())); }catch(err){ alert("匯入失敗："+err.message); }
+});
+$("#importUrl").onclick=async()=>{
+  const u=(prompt("貼上匯入檔的網址（例如 http://192.168.1.102:8781/pack.json）")||"").trim(); if(!u) return;
+  toast("下載中…");
+  try{ const r=await fetch(u,{cache:"no-store"}); if(!r.ok) throw new Error("HTTP "+r.status); await importPack(await r.json()); }
+  catch(err){ alert("匯入失敗："+err.message+"\n\niPad 要跟電腦在同一個 Wi-Fi，電腦上的匯入伺服器視窗要開著。"); }
+};
+$("#exportBtn").onclick=async()=>{
+  toast("打包中…");
+  const fs=await allFolders(), ps=await allPics(), pics=[];
+  for(const p of ps) pics.push({id:p.id,name:p.name,folder:p.folder||"",t:p.t,mime:p.img.type||"image/png",data:await blobToB64(p.img),ink:p.ink?await blobToB64(p.ink):null});
+  const file=new File([JSON.stringify({v:1,made:new Date().toISOString(),folders:fs,pics})],"畫畫本_"+new Date().toISOString().slice(0,10)+".json",{type:"application/json"});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:"畫畫本備份"}); return; }catch(e){} }
+  const a=document.createElement("a"); a.href=URL.createObjectURL(file); a.download=file.name; document.body.appendChild(a); a.click(); a.remove(); toast("已下載 "+file.name);
 };
 
 if("serviceWorker" in navigator && /^https?:/.test(location.protocol)) navigator.serviceWorker.register("sw.js").catch(()=>{});
