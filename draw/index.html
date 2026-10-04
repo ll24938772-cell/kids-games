@@ -51,6 +51,21 @@ button{font-family:inherit}
 .card .del{position:absolute;top:6px;right:6px;width:30px;height:30px;border-radius:50%;border:0;background:rgba(255,255,255,.9);
   color:var(--berry);font-weight:900;font-size:16px;cursor:pointer;box-shadow:0 2px 0 rgba(44,58,56,.15)}
 .note{color:var(--ink-soft);font-weight:500;font-size:clamp(12px,2vmin,15px);text-align:center;max-width:46em;line-height:1.5}
+/* 資料夾列 */
+.folders{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;width:100%;max-width:1100px}
+.fchip{all:unset;cursor:pointer;padding:.45em 1.1em;border-radius:999px;background:var(--paper);box-shadow:inset 0 0 0 3px var(--line);
+  font-weight:900;font-size:clamp(14px,2.4vmin,19px);white-space:nowrap}
+.fchip.on{background:var(--sun);box-shadow:0 4px 0 #D9A62E}
+.fchip.add{color:var(--leaf)} .fchip.edit{color:var(--grape)}
+.card .mv{position:absolute;top:6px;left:6px;width:30px;height:30px;border-radius:50%;border:0;background:rgba(255,255,255,.9);
+  font-size:15px;cursor:pointer;box-shadow:0 2px 0 rgba(44,58,56,.15)}
+/* 搬圖的小視窗 */
+#sheet{position:fixed;inset:0;background:rgba(44,58,56,.35);display:grid;place-items:center;z-index:20}
+#sheet .box{background:var(--paper);border-radius:var(--blob);box-shadow:var(--shadow);padding:clamp(18px,3vmin,28px);
+  display:flex;flex-direction:column;gap:10px;min-width:min(86vw,360px);max-height:80vh;overflow:auto}
+#sheet h3{margin:0 0 6px;font-size:clamp(17px,3vmin,22px)}
+#sheet .list{display:flex;flex-direction:column;gap:8px}
+#sheet .list .btn{justify-content:center}
 
 /* 編輯頁 */
 #edit{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--ground)}
@@ -82,6 +97,7 @@ button{font-family:inherit}
     <label class="btn berry">＋ 加入圖片<input id="pick" type="file" accept="image/*" multiple hidden></label>
     <button class="btn" id="blankBtn">＋ 白紙</button>
   </div>
+  <div class="folders" id="folders"></div>
   <div class="grid" id="grid"></div>
   <p class="note">圖片只存在這台裝置裡，不會上傳。從網站下載的連連看、自己拍的照片都可以加進來，沒網路也能畫。</p>
 </section>
@@ -110,6 +126,7 @@ button{font-family:inherit}
     <button class="tool" id="clear">清除</button>
   </div>
 </section>
+<div id="sheet" class="hidden"><div class="box"><h3>搬到哪個資料夾？</h3><div class="list"></div><button class="btn ghost cancel">取消</button></div></div>
 <div id="toast"></div>
 
 <script>
@@ -132,31 +149,81 @@ function crayonPattern(ctx,col){
   return patCache[col]=ctx.createPattern(c,"repeat");
 }
 
-/* ===== 本機資料庫：pics { id, name, img(Blob), ink(Blob|null), t } ===== */
-function db(){ return new Promise((ok,no)=>{ const r=indexedDB.open("huahua",1);
-  r.onupgradeneeded=()=>{ r.result.createObjectStore("pics",{keyPath:"id"}); };
+/* ===== 本機資料庫：pics { id, name, img, ink, thumb, folder, t }、folders { id, name, t } ===== */
+function db(){ return new Promise((ok,no)=>{ const r=indexedDB.open("huahua",2);
+  r.onupgradeneeded=()=>{ const d=r.result;
+    if(!d.objectStoreNames.contains("pics")) d.createObjectStore("pics",{keyPath:"id"});
+    if(!d.objectStoreNames.contains("folders")) d.createObjectStore("folders",{keyPath:"id"}); };
   r.onsuccess=()=>ok(r.result); r.onerror=()=>no(r.error); }); }
-async function tx(mode,fn){ const d=await db(); return new Promise((ok,no)=>{ const t=d.transaction("pics",mode), s=t.objectStore("pics"); const req=fn(s); t.oncomplete=()=>ok(req&&req.result); t.onerror=()=>no(t.error); }); }
-const allPics=()=>tx("readonly",s=>s.getAll());
-const putPic=p=>tx("readwrite",s=>s.put(p));
-const delPic=id=>tx("readwrite",s=>s.delete(id));
-const getPic=id=>tx("readonly",s=>s.get(id));
+async function tx(store,mode,fn){ const d=await db(); return new Promise((ok,no)=>{ const t=d.transaction(store,mode), s=t.objectStore(store); const req=fn(s); t.oncomplete=()=>ok(req&&req.result); t.onerror=()=>no(t.error); }); }
+const allPics=()=>tx("pics","readonly",s=>s.getAll());
+const putPic=p=>tx("pics","readwrite",s=>s.put(p));
+const delPic=id=>tx("pics","readwrite",s=>s.delete(id));
+const getPic=id=>tx("pics","readonly",s=>s.get(id));
+const allFolders=()=>tx("folders","readonly",s=>s.getAll());
+const putFolder=f=>tx("folders","readwrite",s=>s.put(f));
+const delFolder=id=>tx("folders","readwrite",s=>s.delete(id));
+
+/* ===== 資料夾列：全部／未分類／自建資料夾；目前選的那個可以改名、刪除 ===== */
+let curFolder="all", folders=[];
+async function renderFolders(){
+  folders=(await allFolders()).sort((a,b)=>a.t-b.t);
+  const el=$("#folders"); if(!el) return;
+  const chip=(id,name)=>`<button class="fchip${curFolder===id?" on":""}" data-f="${id}">${name}</button>`;
+  el.innerHTML=chip("all","全部")+chip("","未分類")+folders.map(f=>chip(f.id,"📁 "+f.name)).join("")+
+    `<button class="fchip add" data-f="__new">＋ 資料夾</button>`+
+    (folders.some(f=>f.id===curFolder)?`<button class="fchip edit" data-f="__edit">✎</button>`:"");
+}
+$("#folders").addEventListener("click",async e=>{
+  const b=e.target.closest(".fchip"); if(!b) return;
+  const f=b.dataset.f;
+  if(f==="__new"){ const name=(prompt("資料夾名稱（例如：動物、車子）")||"").trim(); if(!name) return;
+    const id="f"+Date.now(); await putFolder({id,name,t:Date.now()}); curFolder=id; }
+  else if(f==="__edit"){
+    const cur=folders.find(x=>x.id===curFolder); if(!cur) return;
+    const name=prompt("改名（清空並確定＝刪除這個資料夾，圖會移回未分類）",cur.name);
+    if(name===null) return;
+    if(name.trim()){ cur.name=name.trim(); await putFolder(cur); }
+    else if(confirm("刪除資料夾「"+cur.name+"」？裡面的圖會移回未分類")){
+      for(const p of await allPics()) if(p.folder===cur.id){ p.folder=""; await putPic(p); }
+      await delFolder(cur.id); curFolder="all";
+    }
+  }
+  else curFolder=f;
+  await renderFolders(); renderGrid();
+});
+/* 搬圖：跳出資料夾清單讓你選 */
+function moveSheet(p){
+  const s=$("#sheet"); s.classList.remove("hidden");
+  s.querySelector(".list").innerHTML=`<button class="btn ghost" data-to="">未分類</button>`+
+    folders.map(f=>`<button class="btn ghost" data-to="${f.id}">📁 ${f.name}</button>`).join("");
+  s.onclick=async e=>{
+    const b=e.target.closest("[data-to]");
+    if(b){ p.folder=b.dataset.to; await putPic(p); toast("搬好了"); }
+    if(b||e.target===s||e.target.closest(".cancel")){ s.classList.add("hidden"); renderGrid(); }
+  };
+}
 
 function toast(m){ const t=$("#toast"); t.textContent=m; t.classList.add("on"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("on"),1600); }
 
 /* ===== 圖庫 ===== */
 async function renderGrid(){
-  const pics=(await allPics()).sort((a,b)=>b.t-a.t);
+  const all=(await allPics()).sort((a,b)=>b.t-a.t);
+  const pics=all.filter(p=>curFolder==="all" || (p.folder||"")===curFolder);
   const g=$("#grid"); g.innerHTML="";
   pics.forEach(p=>{
     const c=document.createElement("button"); c.className="card";
     const url=URL.createObjectURL(p.thumb||p.img);
-    c.innerHTML=`<img src="${url}" alt=""><span class="nm">${p.name}</span><button class="del" aria-label="刪除">✕</button>`;
+    c.innerHTML=`<img src="${url}" alt=""><span class="nm">${p.name}</span>`+
+      `<button class="del" aria-label="刪除">✕</button><button class="mv" aria-label="搬到資料夾">📁</button>`;
     c.querySelector(".del").onclick=async e=>{ e.stopPropagation(); if(confirm("刪掉「"+p.name+"」？")){ await delPic(p.id); renderGrid(); } };
+    c.querySelector(".mv").onclick=e=>{ e.stopPropagation(); moveSheet(p); };
     c.onclick=()=>openPic(p.id);
     g.appendChild(c);
   });
-  if(!pics.length){ const e=document.createElement("div"); e.className="note"; e.textContent="還沒有圖。按「加入圖片」選一張，或按「白紙」直接畫。"; g.appendChild(e); }
+  if(!pics.length){ const e=document.createElement("div"); e.className="note";
+    e.textContent = all.length ? "這個資料夾還沒有圖。按「加入圖片」會直接放進來，或在別的圖按 📁 搬過來。" : "還沒有圖。按「加入圖片」選一張，或按「白紙」直接畫。";
+    g.appendChild(e); }
 }
 /* 加入圖片：縮到最長邊 1600px 存，省空間也畫得順 */
 async function addFiles(files){
@@ -166,7 +233,7 @@ async function addFiles(files){
     const c=document.createElement("canvas"); c.width=Math.round(bmp.width*k); c.height=Math.round(bmp.height*k);
     c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);
     const blob=await new Promise(r=>c.toBlob(r,"image/png"));
-    await putPic({id:"p"+Date.now()+Math.random().toString(36).slice(2,6), name:f.name.replace(/\.[^.]+$/,"")||"圖片", img:blob, ink:null, t:Date.now()});
+    await putPic({id:"p"+Date.now()+Math.random().toString(36).slice(2,6), name:f.name.replace(/\.[^.]+$/,"")||"圖片", img:blob, ink:null, folder:curFolder==="all"?"":curFolder, t:Date.now()});
   }
   renderGrid(); toast("加進來了");
 }
@@ -175,7 +242,7 @@ $("#blankBtn").onclick=async()=>{
   const c=document.createElement("canvas"); c.width=1200; c.height=900;
   const x=c.getContext("2d"); x.fillStyle="#fff"; x.fillRect(0,0,1200,900);
   const blob=await new Promise(r=>c.toBlob(r,"image/png"));
-  const id="p"+Date.now(); await putPic({id,name:"白紙",img:blob,ink:null,t:Date.now()}); openPic(id);
+  const id="p"+Date.now(); await putPic({id,name:"白紙",img:blob,ink:null,folder:curFolder==="all"?"":curFolder,t:Date.now()}); openPic(id);
 };
 
 /* ===== 編輯 ===== */
@@ -261,7 +328,7 @@ $("#share").onclick=async()=>{
 };
 
 if("serviceWorker" in navigator && /^https?:/.test(location.protocol)) navigator.serviceWorker.register("sw.js").catch(()=>{});
-renderGrid();
+renderFolders().then(renderGrid);
 })();
 </script>
 </body></html>
