@@ -178,6 +178,35 @@ h1{margin:0;font-size:clamp(26px,5.2vmin,46px)}
 .dots .lbl.on{fill:#fff}
 .dots .halo{fill:none;stroke:var(--grape);stroke-width:6;opacity:0}
 .dots .halo.on{opacity:1;animation:ping 1.25s ease-out infinite}
+/* 場景與完成後的畫面 */
+.dots .scene{opacity:.45;transition:opacity .8s ease}
+.dots.done .scene{opacity:1}
+.dots .sun{fill:#FFD75E}
+.dots .cloud{fill:#fff;opacity:.9}
+.dots .hill{fill:#A7D397}
+.dots .bub{fill:#fff;opacity:.55}
+.dots .weed{fill:none;stroke:#5FAE7C;stroke-width:16;stroke-linecap:round}
+.dots .lane{stroke:#fff;stroke-width:8;stroke-dasharray:60 50}
+.dots .link.done{stroke:#2C3A38;stroke-width:14}
+.dots.done .fill.on{opacity:.92}
+.dots.done .pegs{opacity:0;transition:opacity .6s ease}
+.dots .eyeW{fill:#fff;stroke:#2C3A38;stroke-width:6}
+.dots .eyeB{fill:#2C3A38}
+.dots .eyeS{fill:#fff}
+.dots .mouth{fill:none;stroke:#2C3A38;stroke-width:8;stroke-linecap:round}
+.dots .wheel{fill:#2C3A38}
+.dots .hub{fill:#CFD8DC}
+.dots .win{fill:#DFF3FF;stroke:#2C3A38;stroke-width:6;opacity:.9}
+/* 著色：連完之後用手指塗色 */
+.dots .paint path{fill:none;stroke-linecap:round;stroke-linejoin:round;opacity:.85}
+.palette{
+  position:absolute;left:50%;bottom:clamp(8px,1.6vmin,16px);transform:translateX(-50%);
+  display:flex;align-items:center;gap:clamp(6px,1.4vmin,12px);padding:clamp(6px,1.2vmin,10px) clamp(10px,1.8vmin,16px);
+  background:var(--paper);border-radius:999px;box-shadow:var(--shadow);z-index:5;max-width:96%;flex-wrap:wrap;justify-content:center;
+}
+.palette .sw{width:clamp(34px,6vmin,52px);height:clamp(34px,6vmin,52px);border-radius:50%;border:4px solid #fff;box-shadow:0 0 0 2px var(--line);cursor:pointer}
+.palette .sw.on{box-shadow:0 0 0 4px var(--grape)}
+.palette .btn{font-size:clamp(14px,2.4vmin,20px);padding:.45em 1.1em}
 @keyframes ping{0%{r:30;opacity:.95}100%{r:62;opacity:0}}
 #reveal{
   position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-2deg);
@@ -898,7 +927,7 @@ function genCreature(i){
   else { push(.37, gy); push(.27, gy); }
   push(.22, by1-.11);                              /* 胸 */
   push(hx-hr*1.05, hy+hr*1.5);
-  return {n:A.n, e:A.e, p};
+  return {n:A.n, e:A.e, p, meta:{eye:[hx-hr*.45, hy-hr*.15], mouth:[hx-hr*.9, hy+hr*.55]}};
 }
 /* 鳥型：喙、冠羽、兩片大展翅、扇尾、細腳 */
 function genBird(A,i,J){
@@ -920,7 +949,7 @@ function genBird(A,i,J){
   push(.54, .62); push(.54, gy); push(.46, gy); push(.45, .62);   /* 腳 */
   push(.30, .56);                                  /* 胸 */
   push(.12, hy+.12);
-  return {n:A.n, e:A.e, p};
+  return {n:A.n, e:A.e, p, meta:{eye:[.15, hy]}};
 }
 /* 蛇型：長長的波浪身體，頭上有角或背鰭 */
 function genSerp(A,i,J){
@@ -941,7 +970,7 @@ function genSerp(A,i,J){
     push(x, wave(x)+th);
   }
   push(.10, wave(.10)+th*1.2);
-  return {n:A.n, e:A.e, p};
+  return {n:A.n, e:A.e, p, meta:{eye:[.13, wave(.13)-th*.25]}};
 }
 /* 2 歲的連成車：五種車身側面輪廓（含賽車的低扁車身與尾翼），
    點數多的版本會多出輪拱，看起來更像車。 */
@@ -961,7 +990,10 @@ function genVehicle(i){
     [[.74,.70],[.70,.80],[.60,.80],[.56,.70],[.38,.70],[.34,.80],[.24,.80],[.20,.70]]
       .forEach(([x,y])=>p.push([x+J(.015), y]));
   }
-  return {n:T.n, e:T.e, p};
+  /* 完成後補的細節：輪子（有輪拱就放在輪拱裡）、車窗 */
+  const wheels = want>=10 ? [[.29,.78],[.65,.78]] : [[.30,.72],[.72,.72]];
+  const WIN={ "轎車":[[.40,.38,.60,.52]], "賽車":[[.42,.47,.52,.55]], "卡車":[[.22,.33,.34,.44]], "巴士":[[.14,.32,.30,.46],[.38,.32,.54,.46],[.62,.32,.78,.46]], "小貨車":[[.28,.35,.44,.46]] };
+  return {n:T.n, e:T.e, p, meta:{wheels, win:WIN[T.n]||[]}};
 }
 
 /* 三個遊戲都是「圖庫 50 題，每次開始隨機抽 5 題」，抽完由易到難排好 */
@@ -1010,6 +1042,37 @@ function buildPool(id){
   }
   return [];
 }
+/* 場景背景（viewBox 0~1000）：天空漸層＋地面＋幾個裝飾。連的時候半透明，連完才亮 */
+const SCENES={
+  sea: {sky:["#D6F1F8","#8FD3EA"], ground:"#F0E2B0", gy:860,
+        deco:`<circle class="bub" cx="150" cy="300" r="14"/><circle class="bub" cx="820" cy="210" r="10"/><circle class="bub" cx="870" cy="330" r="18"/><circle class="bub" cx="120" cy="520" r="9"/>`+
+             `<path class="weed" d="M120 1000 C 100 920, 160 880, 130 800 C 110 740, 160 710, 140 640"/><path class="weed" d="M880 1000 C 900 920, 850 880, 880 810 C 900 750, 860 720, 870 660"/>`},
+  sky: {sky:["#E3F3FF","#A9D8F5"], ground:"#BFE3B4", gy:900,
+        deco:`<circle class="sun" cx="840" cy="150" r="70"/><ellipse class="cloud" cx="220" cy="190" rx="110" ry="46"/><ellipse class="cloud" cx="300" cy="170" rx="80" ry="40"/><ellipse class="cloud" cx="600" cy="110" rx="90" ry="38"/>`},
+  land:{sky:["#E6F4FF","#CDE9F8"], ground:"#B9E0A5", gy:860,
+        deco:`<circle class="sun" cx="160" cy="150" r="60"/><ellipse class="hill" cx="760" cy="880" rx="300" ry="110"/><ellipse class="hill" cx="200" cy="910" rx="260" ry="100"/>`},
+  road:{sky:["#E6F4FF","#CDE9F8"], ground:"#9AA3AD", gy:880,
+        deco:`<circle class="sun" cx="840" cy="140" r="60"/><ellipse class="hill" cx="300" cy="880" rx="340" ry="80"/><path class="lane" d="M0 945 H1000"/>`}
+};
+/* 每個題目的顏色、場景、眼睛／嘴巴位置（比例座標，生成的怪獸與車子會自己帶 meta） */
+const DOT_META={
+  "三角錐":{c:"#FF8A3D",scene:"road"}, "停車牌":{c:"#E8556D",scene:"road"}, "汽車":{c:"#5C9BD1",scene:"road",wheels:[[.30,.72],[.72,.72]],win:[[.40,.36,.60,.52]]},
+  "水怪獸":{c:"#5C9BD1",scene:"sea",eye:[.31,.44],mouth:[.24,.56]}, "蟲怪獸":{c:"#E8A0C8",scene:"sky",eye:[.50,.28]},
+  "貓怪獸":{c:"#F2B35C",scene:"land",eye:[.38,.37],mouth:[.40,.47]}, "龍怪獸":{c:"#7CB342",scene:"land",eye:[.19,.24]},
+  "轎車":{c:"#3FA796",scene:"road"},"賽車":{c:"#E8556D",scene:"road"},"卡車":{c:"#5C9BD1",scene:"road"},"巴士":{c:"#FFC43D",scene:"road"},"小貨車":{c:"#E8845A",scene:"road"},
+  "火翼龍":{c:"#E8556D",scene:"sky"},"雷鳥":{c:"#FFC43D",scene:"sky"},"海龍":{c:"#4E86C8",scene:"sea"},"砲甲龜":{c:"#3FA796",scene:"sea"},
+  "冰角獸":{c:"#9FD3E8",scene:"land"},"刺背龍":{c:"#7CB342",scene:"land"},"聖鹿":{c:"#D9A066",scene:"land"},"翼蝠獸":{c:"#7B5EA7",scene:"sky"},"鰭水獸":{c:"#5C9BD1",scene:"sea"},"甲蟲獸":{c:"#8E6E53",scene:"land"}
+};
+/* 封閉的 Catmull-Rom 曲線：把折線變成平滑的輪廓 */
+function spline(pts){
+  const n=pts.length; let d="M"+pts[0][0]+" "+pts[0][1];
+  for(let i=0;i<n;i++){
+    const p0=pts[(i-1+n)%n], p1=pts[i], p2=pts[(i+1)%n], p3=pts[(i+2)%n];
+    const c1=[p1[0]+(p2[0]-p0[0])/6, p1[1]+(p2[1]-p0[1])/6], c2=[p2[0]-(p3[0]-p1[0])/6, p2[1]-(p3[1]-p1[1])/6];
+    d+=` C ${c1[0].toFixed(1)} ${c1[1].toFixed(1)}, ${c2[0].toFixed(1)} ${c2[1].toFixed(1)}, ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+  }
+  return d+" Z";
+}
 let shapeQueue=[];
 function buildDots(){
   const small = game==="dotsS";
@@ -1020,13 +1083,25 @@ function buildDots(){
     sh=qpool[step] || genCreature(step);           /* 這一局抽中的 5 隻 */
   }
   const P=sh.p.map(([x,y])=>[40+x*920, 40+y*920]);   /* viewBox 0 0 1000 1000，留邊 */
+  const toVBpt=([x,y])=>[40+x*920, 40+y*920];
   let at=0, wrong=0, hint=small;                      /* 小熊版一開始就發光；小兔版錯兩次才發光 */
 
+  /* 場景：連的時候淡淡的在背後，連完整個亮起來；完成後線條變平滑曲線、上色、長出眼睛／輪子 */
+  const meta=Object.assign({c:"#FFC43D",scene:"land"}, DOT_META[sh.n]||{}, sh.meta||{});
+  const sc=SCENES[meta.scene]||SCENES.land;
   stage.innerHTML=`<div class="dots"><svg viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid meet">
-      <path class="fill"></path><path class="link" d=""></path><g class="pegs"></g></svg></div>`;
-  const svg=stage.querySelector("svg"), fill=svg.querySelector(".fill"),
-        link=svg.querySelector(".link"), pegs=svg.querySelector(".pegs");
-  fill.setAttribute("d","M"+P.map(p=>p.join(" ")).join(" L ")+" Z");
+      <defs>
+        <linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${sc.sky[0]}"/><stop offset="1" stop-color="${sc.sky[1]}"/></linearGradient>
+        <filter id="crayon" x="-5%" y="-5%" width="110%" height="110%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" seed="7" result="n"/>
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="7" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+      </defs>
+      <g class="scene"><rect width="1000" height="1000" fill="url(#skyG)"/><rect y="${sc.gy||820}" width="1000" height="${1000-(sc.gy||820)}" fill="${sc.ground}"/>${sc.deco}</g>
+      <g class="art" filter="url(#crayon)"><path class="fill"></path><path class="link" d=""></path><g class="det"></g></g>
+      <g class="pegs"></g></svg></div>`;
+  const wrap=stage.querySelector(".dots"), svg=stage.querySelector("svg"), fill=svg.querySelector(".fill"),
+        link=svg.querySelector(".link"), pegs=svg.querySelector(".pegs"), det=svg.querySelector(".det");
 
   pegs.innerHTML=P.map((p,i)=>
     `<g data-i="${i}"><circle class="halo" cx="${p[0]}" cy="${p[1]}" r="30"></circle>`+
@@ -1050,7 +1125,40 @@ function buildDots(){
     const m=svg.getScreenCTM(); if(!m) return null;
     return pt.matrixTransform(m.inverse());
   }
+  /* 著色模式：調色盤＋手指畫線（SVG 路徑），上一步可以反悔，按「下一張」換題 */
+  function startPaint(){
+    const NS="http://www.w3.org/2000/svg";
+    const paint=document.createElementNS(NS,"g"); paint.setAttribute("class","paint");
+    svg.insertBefore(paint,pegs);
+    const COLORS=["#E8556D","#FF8A3D","#FFC43D","#7CB342","#3FA796","#5C9BD1","#7B5EA7","#F2B35C","#8E6E53","#FFFFFF"];
+    const bar=document.createElement("div"); bar.className="palette";
+    bar.innerHTML=COLORS.map((c,i)=>`<button class="sw${i===0?" on":""}" style="background:${c}" data-c="${c}" aria-label="顏色"></button>`).join("")+
+      `<button class="btn ghost" id="undoBtn">上一步</button><button class="btn" id="nextBtn">下一張 ▶</button>`;
+    wrap.appendChild(bar);
+    let color=COLORS[0], cur=null, pid=null;
+    bar.addEventListener("click",e=>{
+      const sw=e.target.closest(".sw");
+      if(sw){ color=sw.dataset.c; bar.querySelectorAll(".sw").forEach(b=>b.classList.toggle("on",b===sw)); sfx.tap(); return; }
+      if(e.target.closest("#undoBtn")){ const last=paint.lastElementChild; if(last) last.remove(); sfx.tap(); }
+      if(e.target.closest("#nextBtn")){ sfx.tap(); nextRound(); }
+    });
+    svg.addEventListener("pointerdown",e=>{
+      if(pid!==null) return; const v=toVB(e); if(!v) return;
+      pid=e.pointerId; cur=document.createElementNS(NS,"path");
+      cur.setAttribute("stroke",color); cur.setAttribute("stroke-width","36");
+      cur.dataset.d="M"+v.x.toFixed(1)+" "+v.y.toFixed(1); cur.setAttribute("d",cur.dataset.d+" l0 0.1");
+      paint.appendChild(cur);
+      try{ svg.setPointerCapture(e.pointerId); }catch(err){}
+    });
+    svg.addEventListener("pointermove",e=>{
+      if(e.pointerId!==pid||!cur) return; const v=toVB(e); if(!v) return;
+      cur.dataset.d+=" L"+v.x.toFixed(1)+" "+v.y.toFixed(1); cur.setAttribute("d",cur.dataset.d);
+    });
+    const end=e=>{ if(e.pointerId===pid){ pid=null; cur=null; } };
+    svg.addEventListener("pointerup",end); svg.addEventListener("pointercancel",end);
+  }
   function onDown(e){
+    if(wrap.classList.contains("done")) return;   /* 連完就交給著色模式 */
     audio();
     const v=toVB(e); if(!v) return;
     let best=-1,bd=Infinity;
@@ -1062,15 +1170,27 @@ function buildDots(){
     }
     at++; sfx.step(at); sayNum(at); paint();
     if(at===P.length){
-      link.setAttribute("d","M"+P.map(p=>p.join(" ")).join(" L ")+" Z");
-      fill.classList.add("on");
+      /* 連完：折線變平滑曲線、塗上這個主題的顏色、長出眼睛或輪子、場景亮起來 */
+      const d=spline(P);
+      link.setAttribute("d",d); link.classList.add("done");
+      fill.setAttribute("d",d); fill.style.fill=meta.c; fill.classList.add("on");
+      let extra="";
+      if(meta.eye){ const [ex,ey]=toVBpt(meta.eye);
+        extra+=`<circle class="eyeW" cx="${ex}" cy="${ey}" r="26"/><circle class="eyeB" cx="${ex+5}" cy="${ey}" r="13"/><circle class="eyeS" cx="${ex-3}" cy="${ey-6}" r="4"/>`; }
+      if(meta.mouth){ const [mx,my]=toVBpt(meta.mouth); extra+=`<path class="mouth" d="M${mx-28} ${my} Q ${mx} ${my+26} ${mx+28} ${my}"/>`; }
+      if(meta.wheels) meta.wheels.forEach(w=>{ const [wx,wy]=toVBpt(w);
+        extra+=`<circle class="wheel" cx="${wx}" cy="${wy}" r="40"/><circle class="hub" cx="${wx}" cy="${wy}" r="15"/>`; });
+      if(meta.win) meta.win.forEach(w=>{ const [a,b]=toVBpt([w[0],w[1]]), [c,dd]=toVBpt([w[2],w[3]]);
+        extra+=`<rect class="win" x="${a}" y="${b}" width="${c-a}" height="${dd-b}" rx="14"/>`; });
+      setTimeout(()=>{ det.innerHTML=extra; wrap.classList.add("done"); },300);
       setTimeout(()=>{
         sfx.cheer(); say("是"+sh.n);
         const r=document.createElement("div");
         r.id="reveal"; r.innerHTML=`<div class="em">${sh.e}</div><div class="tx">是${sh.n}！</div>`;
         stage.appendChild(r);
-      },420);
-      setTimeout(nextRound,2300);
+      },900);
+      /* 連完不自動跳下一題：收起名字卡、拿出調色盤，讓小朋友用手指著色，按「下一張」才換 */
+      setTimeout(()=>{ const r=document.getElementById("reveal"); if(r) r.remove(); startPaint(); },2400);
     }
   }
   svg.addEventListener("pointerdown",onDown);
