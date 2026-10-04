@@ -1,4 +1,94 @@
-<!doctype html><html lang="zh-TW"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>小遊戲</title>
-<style>body{margin:0;min-height:100vh;display:grid;place-content:center;gap:18px;font:18px/1.4 -apple-system,"Noto Sans TC",sans-serif;background:#E7F1EE;color:#2C3A38}a{display:block;padding:22px 32px;background:#fff;border-radius:22px;box-shadow:0 6px 0 rgba(44,58,56,.1);text-decoration:none;color:inherit;font-weight:900;font-size:24px;text-align:center}a small{display:block;font-weight:500;font-size:14px;color:#6A7B78;margin-top:4px}</style></head>
-<body><a href="math/">🚗 小車手與小訓練家<small>2 歲與 5 歲的數學小遊戲</small></a><a href="spider/">🕷️ 蛛絲飛簷<small>射絲跑酷</small></a>
-<a href="https://ll24938772-cell.github.io/zhuyin-mole/">ㄅ 注音打地鼠<small>注音打字＋真人語音</small></a></body></html>
+<!doctype html><html lang="zh-TW"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>遊戲樂園</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="遊戲樂園">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="theme-color" content="#E7F1EE">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@800&family=Noto+Sans+TC:wght@500;700;900&display=swap">
+<style>
+/* 跟數學遊戲同一個「幼兒剪貼簿」視覺：淡薄荷點點紙、白紙卡片、黃色紙膠帶 */
+:root{
+  --ground:#E7F1EE;--ground-dot:#CFE3DE;--paper:#FFFFFF;--ink:#2C3A38;--ink-soft:#6A7B78;
+  --berry:#E8556D;--sun:#FFC43D;--leaf:#3FA796;--grape:#7B5EA7;--night:#1b1f2a;
+  --shadow:0 6px 0 rgba(44,58,56,.10),0 14px 28px rgba(44,58,56,.10);
+  --blob:22px 28px 20px 26px / 26px 20px 28px 22px;
+  --zh:"Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif;
+  --num:"Baloo 2","Noto Sans TC",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;color:var(--ink);font-family:var(--zh);
+  background:radial-gradient(circle at 1px 1px,var(--ground-dot) 1.6px,transparent 1.7px) 0 0/26px 26px,var(--ground);
+  -webkit-tap-highlight-color:transparent;overscroll-behavior:none;
+}
+main{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:clamp(18px,3.4vmin,36px);padding:clamp(20px,4vmin,44px) 20px calc(clamp(20px,4vmin,44px) + env(safe-area-inset-bottom))}
+h1{margin:0;font-size:clamp(28px,5.6vmin,50px)}
+.tape{display:inline-block;padding:.32em 1.1em;background:var(--sun);transform:rotate(-1.6deg);
+  box-shadow:0 3px 0 rgba(44,58,56,.12);font-weight:900;letter-spacing:.06em}
+.sub{margin:-.4em 0 0;color:var(--ink-soft);font-weight:500;font-size:clamp(13px,2.1vmin,17px)}
+.games{display:flex;flex-wrap:wrap;justify-content:center;gap:clamp(16px,3.2vmin,34px);width:100%;max-width:1100px}
+.game{
+  all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.3em;text-align:center;
+  width:clamp(200px,30vmin,300px);padding:clamp(20px,3.6vmin,34px) clamp(14px,2.2vmin,22px);
+  background:var(--paper);border-radius:var(--blob);box-shadow:var(--shadow);
+  transition:transform .16s ease;
+}
+.game:nth-child(1){transform:rotate(-2deg)}
+.game:nth-child(2){transform:rotate(1.6deg)}
+.game:nth-child(3){transform:rotate(-1.2deg)}
+.game:active{transform:scale(.95) rotate(0)}
+.game:focus-visible{outline:4px solid var(--grape);outline-offset:4px}
+.face{font-size:clamp(64px,14vmin,130px);line-height:1}
+.face.zy{font-family:var(--num);font-weight:800;color:var(--grape);font-size:clamp(60px,13vmin,120px)}
+.name{font-weight:900;font-size:clamp(19px,3.3vmin,28px)}
+.who{font-size:clamp(13px,2.1vmin,16px);color:var(--ink-soft);font-weight:500}
+.game[data-k="math"] .name{color:var(--leaf)}
+.game[data-k="spider"] .name{color:var(--night)}
+.game[data-k="zhuyin"] .name{color:var(--grape)}
+.tag{margin-top:.4em;font-size:clamp(11px,1.8vmin,13px);font-weight:700;letter-spacing:.08em;
+  padding:.25em .8em;border-radius:999px;background:var(--ground);color:var(--ink-soft)}
+footer{font-size:clamp(12px,1.9vmin,14px);color:var(--ink-soft);font-weight:500;text-align:center}
+#off{display:none;color:var(--leaf);font-weight:700}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head>
+<body><main>
+  <h1><span class="tape">遊戲樂園</span></h1>
+  <p class="sub">點一個開始玩</p>
+  <div class="games">
+    <a class="game" data-k="math" href="math/">
+      <span class="face">🚗</span>
+      <span class="name">小車手與小訓練家</span>
+      <span class="who">2 歲汽車・5 歲怪獸</span>
+      <span class="tag">數學 18 種</span>
+    </a>
+    <a class="game" data-k="spider" href="spider/">
+      <span class="face">🕷️</span>
+      <span class="name">蛛絲飛簷</span>
+      <span class="who">射絲跑酷・比高分</span>
+      <span class="tag">反應</span>
+    </a>
+    <a class="game" data-k="zhuyin" href="https://ll24938772-cell.github.io/zhuyin-mole/">
+      <span class="face zy">ㄅㄆ</span>
+      <span class="name">注音打地鼠</span>
+      <span class="who">注音打字・真人語音</span>
+      <span class="tag">注音</span>
+    </a>
+  </div>
+  <footer>Safari「分享」→「加入主畫面」，前兩個遊戲沒網路也能玩<br><span id="off">✅ 已存在這台裝置裡，離線可玩</span></footer>
+</main>
+<script>
+/* 入口頁的服務工作者會把數學遊戲和蛛絲飛簷一起存進裝置，所以只要加入一次主畫面就夠 */
+if('serviceWorker' in navigator && /^https?:/.test(location.protocol)){
+  navigator.serviceWorker.register('sw.js').then(async()=>{
+    try{ const c=await caches.open('park-v1'); const n=(await c.keys()).length; if(n>=5) document.getElementById('off').style.display='block'; }catch(e){}
+  }).catch(()=>{});
+}
+</script>
+</body></html>
