@@ -95,7 +95,14 @@ footer{font-size:clamp(12px,1.9vmin,14px);color:var(--ink-soft);font-weight:500;
 /* 入口頁的服務工作者會把數學遊戲和蛛絲飛簷一起存進裝置，所以只要加入一次主畫面就夠 */
 if('serviceWorker' in navigator && /^https?:/.test(location.protocol)){
   navigator.serviceWorker.register('sw.js').then(async()=>{
-    try{ const c=await caches.open('park-v1'); const n=(await c.keys()).length; if(n>=5) document.getElementById('off').style.display='block'; }catch(e){}
+    /* 看任何一個 park-* 快取是否已存好三個遊戲；沒存好就提示要先在有網路時從主畫面開一次 */
+    try{
+      const names=(await caches.keys()).filter(k=>k.startsWith('park-')); let n=0;
+      for(const k of names){ n=Math.max(n,(await caches.open(k).then(c=>c.keys())).length); }
+      const el=document.getElementById('off');
+      if(n>=12){ el.textContent='✅ 三個遊戲都已存在這台裝置裡，關掉 Wi-Fi 也能玩'; el.style.display='block'; }
+      else { el.textContent='⏳ 正在把遊戲存進這台裝置… 幾秒後重新整理一次會變成 ✅'; el.style.display='block'; }
+    }catch(e){}
   }).catch(()=>{});
 }
 </script>
